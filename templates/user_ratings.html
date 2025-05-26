@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{%load static%}
+{% block content %}
+
+<div class="container">
+    <div class="header">
+        <h1>User Ratings</h1>
+    </div>
+
+    {% if user_ratings %}
+    <h2>Ratings for User {{ user_id }}</h2>
+    <div class="card-container">
+        {% for rating in user_ratings %}
+        <div class="rating-card">
+            {% if rating.book.image_url_m %}
+            <img src="{{ rating.book.image_url_m }}" alt="{{ rating.book.title }}">
+            {% else %}
+            <img src="{% static 'images/no_image_available.jpg' %}" alt="No Image Available">
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title">{{ rating.book.title }}</h5>
+                <p class="card-text">{{ rating.book.author }}</p>
+                <p class="card-text">ISBN: {{ rating.book.isbn }}</p>
+                <p class="card-text">Year: {{ rating.book.year_of_publication }}</p>
+                <p class="card-text">Rating: {{ rating.book_rating }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-ratings">No ratings found for this user.</p>
+    {% endif %}
+</div>
+{% endblock %}

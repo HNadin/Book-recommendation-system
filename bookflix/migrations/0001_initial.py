@@ -1,0 +1,73 @@
+from django.db import migrations, models
+import django.db.models.deletion
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = []
+
+    operations = [
+        migrations.CreateModel(
+            name="Book",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("isbn", models.CharField(max_length=200)),
+                ("title", models.CharField(max_length=255)),
+                ("author", models.CharField(max_length=255)),
+                ("year_of_publication", models.IntegerField(blank=True, null=True)),
+                ("publisher", models.CharField(max_length=255)),
+                ("image_url_s", models.URLField()),
+                ("image_url_m", models.URLField()),
+                ("image_url_l", models.URLField()),
+            ],
+        ),
+        migrations.CreateModel(
+            name="User",
+            fields=[
+                (
+                    "user_id",
+                    models.IntegerField(primary_key=True, serialize=False, unique=True),
+                ),
+                ("location", models.CharField(max_length=255)),
+                ("age", models.IntegerField(blank=True, null=True)),
+            ],
+        ),
+        migrations.CreateModel(
+            name="Rating",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("book_rating", models.IntegerField()),
+                (
+                    "book",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="bookflix.book",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="bookflix.user",
+                    ),
+                ),
+            ],
+        ),
+    ]

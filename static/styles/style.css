@@ -1,0 +1,143 @@
+* {
+    padding: 0%;
+    margin: 0%;
+    box-sizing: border-box;
+}
+
+.slider {
+    position: absolute;
+    display: flex;
+    top: 50%;
+    left: 50%;
+    background-color: black;
+    height: 60%;
+    width: 100%;
+    transform: translate(-50%,-50%);
+}
+
+section {
+    position: relative;
+    display: flex;
+    height: 100vh;
+}
+
+.logo {
+    width: 8%;
+    height: auto;
+    position: absolute;
+    top: 3%;
+    left: 3%;
+    transform: translate(-3%,-3%);
+}
+
+.logo-big {
+    position: absolute;
+    width: 40%;
+    height: auto;
+    top: 20%;
+    left: 50%;
+    transform: translate(-50%,-20%);
+}
+
+.menu {
+    position: absolute;
+    display: flex;
+    width: 42vw;
+    justify-content: space-evenly;
+    top: 4%;
+    right: 3%;
+    list-style-type: none;
+}
+
+a {
+    color: white;
+    text-decoration: none;
+    font-family: "Poppins", sans-serif;
+    font-weight: 900;
+    font-size: 1.2em;
+}
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+.book {
+    position: absolute;
+    width: 40%;
+    height: auto;
+    left: 50%;
+    top: 70%;
+    transform: translate(-50%,-70%);
+}
+
+.quote {
+    font-family: "Poppins", sans-serif;
+    position: absolute;
+    left: 50%;
+    top: 85%;
+    transform: translateX(-50%);
+    text-align: right;
+    color: blanchedalmond;
+}
+
+.section2 {
+    background-color: black;
+    display: block;
+}
+
+.about_head {
+    font-family: "Poppins", sans-serif;
+    font-size: 4em;
+    font-weight: 900;
+    color: blanchedalmond;
+    margin-left: 13%;
+    padding-top: 2.5%;
+}
+
+.about_p {
+    width: 40vw;
+    font-family: "Poppins", sans-serif;
+    font-size: 1.1em;
+    color: blanchedalmond;
+    margin-top: 0%;
+}
+
+.about_img {
+    width: auto;
+    height: 75vh;
+    border-radius: 200px 200px 0px 0px;
+    margin-top: -4%;
+    z-index: 2;
+}
+
+#circ_container {
+    position: absolute;
+    width: 13%;
+    top: 300px;
+    left: 68%;
+    transform: translateX(-68%);
+    z-index: 3;
+}
+
+#circ_container2 {
+    position: absolute;
+    width: 13%;
+    top: 300px;
+    left: 68%;
+    transform: translateX(-68%);
+}
+
+#circle {
+    -webkit-text-stroke: 1px white;
+    color: transparent;
+    font-size: 50px;
+    font-weight: 900;
+    transition: all 0.5s linear;
+}
+
+#circle2 {
+    color: white;
+    font-size: 50px;
+    font-weight: 900;
+    transition: all 0.5s linear;
+}

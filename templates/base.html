@@ -1,0 +1,236 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: black;
+            font-family: 'Poppins', sans-serif;
+            color: blanchedalmond;
+        }
+
+        .header {
+            width: 70%;
+            height: 20vh;
+            margin-top: 3%;
+            margin-bottom: 3%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: "Poppins", sans-serif;
+            background-color: #b81024;
+            box-shadow: 0 0 20px -1px rgba(238, 72, 72, 0.50);
+            color: white;
+            border-radius: 20px;
+        }
+
+        h2 {
+            font-family: "Poppins", sans-serif;
+            color: white;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .form-block {
+            width: 80%;
+            margin: auto;
+            text-align: center;
+        }
+
+        label {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: blanchedalmond;
+            margin-right: 10px;
+        }
+
+        input {
+            height: 40px;
+            font-size: 1em;
+            font-weight: 600;
+            background-color: blanchedalmond;
+            border-radius: 10px;
+            border: none;
+            padding: 0 10px;
+            margin-right: 10px;
+        }
+
+        button {
+            height: 40px;
+            font-weight: bold;
+            font-size: 1em;
+            border: none;
+            border-radius: 10px;
+            padding: 0 20px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .user-ids-block {
+            width: 80%;
+            margin: 30px auto;
+            text-align: center;
+        }
+
+            .user-ids-block a {
+                background-color: #17a2b8;
+                color: white;
+                padding: 5px 10px;
+                border-radius: 5px;
+                text-decoration: none;
+                margin: 5px;
+                display: inline-block;
+            }
+
+
+        .card-container {
+            width: 90%;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 2vw;
+            border-radius: 25px;
+            background-color: rgb(31, 41, 55);
+            box-shadow: 0 0px 20px -1px rgba(42, 55, 73, 0.5);
+            margin-top: 2%;
+        }
+
+        .card-body {
+            color: black;
+        }
+
+        .rating-card {
+            width: 200px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            font-family: "Poppins", sans-serif;
+        }
+
+            .rating-card img {
+                width: 100%;
+                height: auto;
+                object-fit: cover;
+            }
+
+            .rating-card .card-body {
+                padding: 10px;
+                font-size: 0.9em;
+            }
+
+            .rating-card .card-title {
+                font-size: 1em;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+
+            .rating-card .card-text {
+                margin: 2px 0;
+            }
+
+        .no-ratings {
+            color: white;
+            font-family: "Poppins", sans-serif;
+            margin-top: 20px;
+        }
+
+        .container {
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .lead {
+            font-size: 1.25rem;
+            font-weight: 300;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><h1>Recommendation System</h1></div>
+
+            <form class="form-inline justify-content-center mb-4" id="userForm">
+                <div class="form-group mx-2">
+                    <label for="user_id">User ID:</label>
+                    <input type="text" class="form-control mx-2" id="user_id" name="user_id" value="{% if selected_user_id %}{{ selected_user_id }}{% endif %}" required>
+                </div>
+                <button type="button" class="btn btn-primary mx-2" onclick="submitRatingsForm()">Get Ratings</button>
+                <button type="button" class="btn btn-success mx-2" onclick="submitRecommendationsForm()">Get Recommendations</button>
+            </form>
+        </div><br>
+
+        <div class="container">
+            <div class="mb-4 text-center">
+                <h5>User IDs with 5 or more reviews:</h5>
+                <div>
+                    {% for id in random_user_ids %}
+                    <a href="{% url 'user_ratings' id %}" class="btn btn-info btn-sm m-1">{{ id }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% block content %}{% endblock %}
+        </div>
+
+        <!-- Bootstrap JS and dependencies -->
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        <script>
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            function submitRatingsForm() {
+                const userId = document.getElementById('user_id').value;
+                if (!userId) {
+                    alert('Please enter a user ID.');
+                    return;
+                }
+                window.location.href = `/ratings/${userId}/`;
+            }
+
+            function submitRecommendationsForm() {
+                const userId = document.getElementById('user_id').value;
+                if (!userId) {
+                    alert('Please enter a user ID.');
+                    return;
+                }
+                window.location.href = `/recommendations/${userId}/`;
+            }
+        </script>
+</body>
+</html>

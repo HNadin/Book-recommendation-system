@@ -4,13 +4,19 @@ import csv
 
 
 def load_data(nrows):
-    data = pd.read_csv("final_books3.csv")
-    return data
+    try:
+        data = pd.read_csv("final_books3.csv")
+        return data
+    except Exception:
+        return pd.DataFrame()
 
 
 def load_data1(nrows):
-    data = pd.read_csv("reco.csv")
-    return data
+    try:
+        data = pd.read_csv("reco.csv")
+        return data
+    except Exception:
+        return pd.DataFrame()
 
 
 books = load_data(10000)
@@ -21,6 +27,8 @@ original_data1 = users
 
 
 def get_my_choices():
+    if books.empty or 'original_title' not in books.columns:
+        return ()
     list1 = books['original_title'].unique().tolist()
     list2 = books['original_title'].unique().tolist()
     merged_list = tuple(zip(iter(list1), iter(list2)))
@@ -28,6 +36,8 @@ def get_my_choices():
 
 
 def get_list():
+    if users.empty or books.empty or 'book_title' not in users.columns or 'original_title' not in books.columns:
+        return ()
     titles = users['book_title'].unique()
     title = books[books['original_title'].isin(titles)]
     title1 = title['original_title'].unique()

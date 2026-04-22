@@ -1,34 +1,49 @@
 {% extends 'base.html' %}
-{%load static%}
+{% block title %}Ratings for User {{ user_id }} — BOOKFLIX{% endblock %}
+
 {% block content %}
+<div class="container-fluid" style="max-width:1100px; padding: 0 1.5rem;">
 
-<div class="container">
-    <div class="header">
-        <h1>User Ratings</h1>
-    </div>
+  <div class="page-header">
+    <h1>Reading History — User {{ user_id }}</h1>
+  </div>
 
-    {% if user_ratings %}
-    <h2>Ratings for User {{ user_id }}</h2>
-    <div class="card-container">
-        {% for rating in user_ratings %}
-        <div class="rating-card">
-            {% if rating.book.image_url_m %}
-            <img src="{{ rating.book.image_url_m }}" alt="{{ rating.book.title }}">
-            {% else %}
-            <img src="{% static 'images/no_image_available.jpg' %}" alt="No Image Available">
-            {% endif %}
-            <div class="card-body">
-                <h5 class="card-title">{{ rating.book.title }}</h5>
-                <p class="card-text">{{ rating.book.author }}</p>
-                <p class="card-text">ISBN: {{ rating.book.isbn }}</p>
-                <p class="card-text">Year: {{ rating.book.year_of_publication }}</p>
-                <p class="card-text">Rating: {{ rating.book_rating }}</p>
-            </div>
-        </div>
-        {% endfor %}
+  <!-- Nav -->
+  <div style="text-align:center; margin-bottom:1.5rem;">
+    <a class="uid-btn" href="{% url 'ratingsrecommend' %}" style="background:#374151;">&larr; Back</a>
+    <a class="uid-btn" href="{% url 'user_recommendations' user_id %}" style="background:#b81024;">Get Recommendations &rarr;</a>
+    <a class="uid-btn" href="{% url 'user_recommendations' user_id %}?sentiment=1" style="background:#7c3aed;">+ Sentiment Correction &rarr;</a>
+  </div>
+
+  <p style="color:#6b7280; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem; text-align:center;">Other users:</p>
+  <div style="text-align:center; margin-bottom:1.5rem;">
+    {% for id in random_user_ids %}
+    <a class="uid-btn" href="{% url 'user_ratings' id %}">{{ id }}</a>
+    {% endfor %}
+  </div>
+
+  {% if user_ratings %}
+  <div class="cards-grid">
+    {% for rating in user_ratings %}
+    <div class="book-card">
+      {% if rating.book.image_url_m %}
+      <img src="{{ rating.book.image_url_m }}" alt="{{ rating.book.title }}">
+      {% else %}
+      <div style="width:100%;height:200px;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.75rem;">No cover</div>
+      {% endif %}
+      <div class="card-info">
+        <div class="card-title">{{ rating.book.title|truncatechars:45 }}</div>
+        <div class="card-author">{{ rating.book.author }}</div>
+        <div class="card-score">Rating: {{ rating.book_rating }}/10</div>
+      </div>
     </div>
-    {% else %}
-    <p class="no-ratings">No ratings found for this user.</p>
-    {% endif %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="alert-warn-dark" style="max-width:500px; margin: 2rem auto; text-align:center;">
+    No ratings found for user {{ user_id }}.
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}

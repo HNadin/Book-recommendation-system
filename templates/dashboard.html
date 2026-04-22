@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — BOOKFLIX{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width:1200px; padding: 0 1.5rem;">
+
+  <!-- Header -->
+  <div class="page-header">
+    <h1><i class="fas fa-chart-bar" style="margin-right:0.5rem;"></i>Analytics Dashboard</h1>
+  </div>
+
+  <!-- Dataset stats -->
+  <div class="row justify-content-center mb-4" style="gap:0;">
+    <div class="col-md-3 col-6 p-2">
+      <div class="stat-card">
+        <div class="stat-num">{{ num_books|default:"–" }}</div>
+        <div class="stat-label">Books</div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6 p-2">
+      <div class="stat-card">
+        <div class="stat-num">{{ num_users|default:"–" }}</div>
+        <div class="stat-label">Users</div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6 p-2">
+      <div class="stat-card">
+        <div class="stat-num">{{ num_ratings|default:"–" }}</div>
+        <div class="stat-label">Ratings</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rating distribution chart -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937;">
+        <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Rating Distribution (Book-Crossing Dataset)</h5>
+        <canvas id="ratingChart" style="max-height:280px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top books -->
+  <div class="row mb-4">
+    <div class="col-md-6 mb-3">
+      <div style="background:#141414; border-radius:14px; padding:1.2rem; border:1px solid #1f2937;">
+        <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Most Rated Books</h5>
+        <div class="cards-grid">
+          {% for book in popular_books %}
+          <div class="book-card">
+            {% if book.image_url_m %}<img src="{{ book.image_url_m }}" alt="{{ book.title }}">{% else %}<div style="width:100%;height:200px;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.75rem;">No cover</div>{% endif %}
+            <div class="card-info">
+              <div class="card-title">{{ book.title|truncatechars:40 }}</div>
+              <div class="card-author">{{ book.author }}</div>
+              <div class="card-score">{{ book.n }} ratings</div>
+            </div>
+          </div>
+          {% empty %}
+          <p style="color:#6b7280;font-size:0.85rem;">No data — import the dataset first.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+      <div style="background:#141414; border-radius:14px; padding:1.2rem; border:1px solid #1f2937;">
+        <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Highest Rated Books</h5>
+        <div class="cards-grid">
+          {% for book in top_rated_books %}
+          <div class="book-card">
+            {% if book.image_url_m %}<img src="{{ book.image_url_m }}" alt="{{ book.title }}">{% else %}<div style="width:100%;height:200px;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.75rem;">No cover</div>{% endif %}
+            <div class="card-info">
+              <div class="card-title">{{ book.title|truncatechars:40 }}</div>
+              <div class="card-author">{{ book.author }}</div>
+              <div class="card-score">avg {{ book.avg|floatformat:1 }}</div>
+            </div>
+          </div>
+          {% empty %}
+          <p style="color:#6b7280;font-size:0.85rem;">No data — import the dataset first.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sentiment summary -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937;">
+        <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Sentiment Analysis of Reviews (Section 2.5)</h5>
+        {% if sentiment_available %}
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <div class="metric-badge">Positive <span>{{ sentiment_positive }}</span></div>
+          <div class="metric-badge">Neutral <span>{{ sentiment_neutral }}</span></div>
+          <div class="metric-badge">Negative <span>{{ sentiment_negative }}</span></div>
+          {% if polarity_mean is not None %}<div class="metric-badge">Mean polarity <span>{{ polarity_mean }}</span></div>{% endif %}
+        </div>
+        <canvas id="sentimentChart" style="max-height:200px; max-width:400px;"></canvas>
+        {% else %}
+        <div class="alert-warn-dark">
+          <i class="fas fa-exclamation-triangle"></i>
+          sentiments.csv not found. Run <code>python manage.py train_models</code> with Reviews.csv present.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick eval preview -->
+  {% if eval_results %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937;">
+        <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">
+          Model Comparison Preview — <a href="{% url 'evaluate' %}" style="color:var(--crimson);">Full report →</a>
+        </h5>
+        <div class="table-responsive">
+          <table class="eval-table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                {% for key in eval_results.values|first %}<th>{{ key }}</th>{% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for model_name, metrics in eval_results.items %}
+              <tr>
+                <td>{{ model_name }}</td>
+                {% for val in metrics.values %}
+                <td>{% if val is not None %}{{ val }}{% else %}—{% endif %}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+{% if rating_dist_labels %}
+new Chart(document.getElementById('ratingChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ rating_dist_labels|safe }},
+    datasets: [{
+      label: 'Count',
+      data: {{ rating_dist_values|safe }},
+      backgroundColor: 'rgba(184,16,36,0.7)',
+      borderColor: '#b81024',
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#9ca3af' }, grid: { color: '#1f2937' } },
+      y: { ticks: { color: '#9ca3af' }, grid: { color: '#1f2937' } }
+    }
+  }
+});
+{% endif %}
+
+{% if sentiment_available %}
+new Chart(document.getElementById('sentimentChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Positive', 'Neutral', 'Negative'],
+    datasets: [{
+      data: [{{ sentiment_positive }}, {{ sentiment_neutral }}, {{ sentiment_negative }}],
+      backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
+      borderWidth: 0,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#9ca3af' } } }
+  }
+});
+{% endif %}
+</script>
+{% endblock %}

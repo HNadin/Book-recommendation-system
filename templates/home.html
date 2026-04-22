@@ -2,71 +2,140 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://fonts.googleapis.com/css?family=Poppins&display=swap" rel="stylesheet" />
-    <link href="/static/styles/style.css" rel="stylesheet"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous" />
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BOOKFLIX — Intelligent Book Recommendations</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    :root { --crimson: #b81024; --bg: #0a0a0a; --text: #f5f0e8; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; overflow-x: hidden; }
+
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      position: relative;
+      padding: 2rem;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 40%, rgba(184,16,36,0.15) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .logo {
+      font-size: clamp(3.5rem, 10vw, 7rem);
+      font-weight: 900;
+      color: var(--crimson);
+      letter-spacing: 6px;
+      line-height: 1;
+      text-shadow: 0 0 60px rgba(184,16,36,0.5);
+      opacity: 0;
+      transform: translateY(-30px);
+      animation: fadeDown 0.9s ease forwards 0.3s;
+    }
+    .tagline {
+      font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+      color: #9ca3af;
+      margin-top: 1rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeUp 0.9s ease forwards 0.7s;
+    }
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 3rem;
+      opacity: 0;
+      animation: fadeUp 0.9s ease forwards 1.1s;
+    }
+    .hero-btn {
+      padding: 0.85rem 2.2rem;
+      border-radius: 50px;
+      font-weight: 800;
+      font-size: 1rem;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .hero-btn:hover { transform: translateY(-3px); text-decoration: none; }
+    .hero-btn-primary { background: var(--crimson); color: #fff; box-shadow: 0 4px 20px rgba(184,16,36,0.4); }
+    .hero-btn-primary:hover { background: #e52030; color: #fff; box-shadow: 0 8px 32px rgba(184,16,36,0.6); }
+    .hero-btn-outline { background: transparent; color: var(--text); border: 2px solid #374151; }
+    .hero-btn-outline:hover { border-color: var(--crimson); color: var(--crimson); }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      max-width: 900px;
+      margin: 4rem auto 0;
+      padding: 0 1rem;
+      opacity: 0;
+      animation: fadeUp 0.9s ease forwards 1.4s;
+    }
+    .feature-card {
+      background: #141414;
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      padding: 1.4rem 1.2rem;
+      text-align: center;
+    }
+    .feature-card .icon { font-size: 1.8rem; color: var(--crimson); margin-bottom: 0.6rem; }
+    .feature-card h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .feature-card p { font-size: 0.8rem; color: #6b7280; line-height: 1.5; }
+
+    @keyframes fadeDown { to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+  </style>
 </head>
 <body>
-    <section>
-        <div class="slider">
-            <img src="{% static 'images/logo.png' %} " class="logo all">
-        </div>
-        <div>
-            <ul class="menu all">
-                <li><a href="{% url 'recommend' %}">Recommendation</a></li>
-                <li><a href="{% url 'ratingsreccomend' %}">Recommendation by ratings</a></li>
+<div class="hero">
+  <div class="logo">BOOKFLIX</div>
+  <div class="tagline">Intelligent Neural Book Recommendation System</div>
 
-            </ul>
-        </div>
-        <!--<img src="{% static '/images/logo.png' %}" class="logo-big">-->
-        <img src="{% static 'images/book.png' %}" class="book">
-        <p class="quote">
-            A room without book is like a body without a soul.<br>-CICERO
-        </p>
-    </section>
-    <!--<section class="section2">
-        <h1 class="about_head">About Us</h1>
-        <div style="display: flex;justify-content:space-evenly;margin-top:1%">
+  <div class="hero-buttons">
+    <a class="hero-btn hero-btn-primary" href="/ratingsrecommend/">Get Recommendations</a>
+    <a class="hero-btn hero-btn-outline" href="/dashboard/">Analytics Dashboard</a>
+    <a class="hero-btn hero-btn-outline" href="/evaluate/">Model Evaluation</a>
+  </div>
 
-            <p class="about_p" align="justify">BOOKFLIX is Analysis and Recommender System made in Python. It provides Sentiment Analysis and Deep Analysis on Books, Authors and Users dataset and also has a Recommendation system. There are two types of Recommender system, Out of them one is Content Based System and other one is collaborative System. You just have to select a book you have readed and then it will recommend you a book </p>
-            <img src="{% static 'images/about_book.jpg' %}" class="about_img">
-            <div id="circ_container"><p id="circle">BOOKFLIX BOOKFLIX </p></div>
-            <div id="circ_container2"><p id="circle2">BOOKFLIX BOOKFLIX </p></div>
-        </div>
-    </section>-->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TweenMax.min.js" integrity="sha512-DkPsH9LzNzZaZjCszwKrooKwgjArJDiEjA5tTgr3YX4E6TYv93ICS8T41yFHJnnSmGpnf0Mvb5NhScYbwvhn2w==" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.3/TimelineMax.min.js" integrity="sha512-0xrMWUXzEAc+VY7k48pWd5YT6ig03p4KARKxs4Bqxb9atrcn2fV41fWs+YXTKb8lD2sbPAmZMjKENiyzM/Gagw==" crossorigin="anonymous"></script>
-    <script src="/static/javascript/circletype.min.js"></script>
-    <script>
-        const slider = document.querySelector('.slider');
-        const menu = document.querySelector('.menu');
-        const logo = document.querySelector('.logo');
-        const logo_big = document.querySelector('.logo-big');
-        const book = document.querySelector('.book');
-        const quote = document.querySelector('.quote');
-        const t1 = new TimelineMax();
-        t1.fromTo(slider, 0, { height: "0%" }, { height: "100%", ease: Power2.easeIn })
-            .fromTo(book, 0, { left: "-100%" }, { left: "50%", ease: Power2.easeInOut })
-            .fromTo(logo, 0, { opacity: "0" }, { opacity: "1", ease: Power2.easeInOut })
-            .fromTo(menu, 0, { opacity: "0" }, { opacity: "1", ease: Power2.easeInOut }, "-=1.5")
-            .fromTo(quote, 0, { opacity: "0" }, { opacity: "1", ease: Power2.easeInOut }, "-=1.5")
-            .fromTo(about_us, 0, { opacity: "0" }, { opacity: "1", ease: Power2.easeInOut }, "-=1.5")
-            .fromTo(sm, 0, { opacity: "0" }, { opacity: "1", ease: Power2.easeInOut }, "-=1.5")
-            .fromTo(logo_big, 0, { opacity: "0" }, { opacity: "1", ease: Power2.easeInOut }, "-=1.5");
-
-        new CircleType(document.getElementById("circle"));
-        new CircleType(document.getElementById("circle2"));
-
-        const circle1 = document.getElementById("circle");
-        const circle2 = document.getElementById("circle2");
-        window.addEventListener("scroll", function () {
-            circle1.style.transform = "rotate(" + window.pageYOffset + "deg)";
-            circle2.style.transform = "rotate(" + window.pageYOffset + "deg)";
-        });
-    </script>
+  <div class="features">
+    <div class="feature-card">
+      <div class="icon"><i class="fas fa-brain"></i></div>
+      <h4>Neural Collaborative Filtering</h4>
+      <p>PyTorch MLP replaces SVD — captures nonlinear user–item interactions.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon"><i class="fas fa-book-open"></i></div>
+      <h4>Semantic Embeddings</h4>
+      <p>LSA / BERT-based vector representations replace TF-IDF title matching.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon"><i class="fas fa-layer-group"></i></div>
+      <h4>Feature Combination Hybrid</h4>
+      <p>NCF + semantic signals merged at meta-level, not simple cascade.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon"><i class="fas fa-comment-dots"></i></div>
+      <h4>Sentiment Correction</h4>
+      <p>VADER sentiment adjusts ratings before training for truer signal.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon"><i class="fas fa-chart-line"></i></div>
+      <h4>Ranking Metrics</h4>
+      <p>NDCG@10 and Precision@10 replace MSE-only evaluation.</p>
+    </div>
+  </div>
+</div>
 </body>
 </html>

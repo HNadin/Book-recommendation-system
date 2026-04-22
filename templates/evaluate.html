@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% block title %}Model Evaluation — BOOKFLIX{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width:1100px; padding: 0 1.5rem;">
+
+  <div class="page-header">
+    <h1><i class="fas fa-flask" style="margin-right:0.5rem;"></i>Experimental Results &amp; Model Comparison</h1>
+  </div>
+
+  <p style="text-align:center; color:#9ca3af; font-size:0.88rem; margin-bottom:2rem;">
+    Section 3.5 — Comparison of RMSE, Precision@K and NDCG@K across all model variants.<br>
+    Evaluated on a held-out 20% test split of the Book-Crossing dataset.
+  </p>
+
+  {% if has_results %}
+
+  <!-- Main comparison table -->
+  <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937; margin-bottom:2rem;">
+    <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1.2rem;">
+      Offline Evaluation — All Model Variants
+    </h5>
+    <div class="table-responsive">
+      <table class="eval-table">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Model</th>
+            <th>RMSE ↓</th>
+            <th>Precision@10 ↑</th>
+            <th>NDCG@10 ↑</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in models %}
+          <tr>
+            <td>{{ m.name }}</td>
+            {% with metrics=m.metrics %}
+            <td>{% if metrics.rmse is not None %}{{ metrics.rmse }}{% else %}<span style="color:#4b5563;">—</span>{% endif %}</td>
+            <td>
+              {% for key, val in metrics.items %}
+                {% if "precision" in key %}{{ val }}{% endif %}
+              {% endfor %}
+            </td>
+            <td>
+              {% for key, val in metrics.items %}
+                {% if "ndcg" in key %}{{ val }}{% endif %}
+              {% endfor %}
+            </td>
+            {% endwith %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="row mb-4">
+    <div class="col-md-6 mb-3">
+      <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937;">
+        <h5 style="color:#9ca3af; font-size:0.82rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Precision@10 by Model</h5>
+        <canvas id="precisionChart" style="max-height:280px;"></canvas>
+      </div>
+    </div>
+    <div class="col-md-6 mb-3">
+      <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937;">
+        <h5 style="color:#9ca3af; font-size:0.82rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">NDCG@10 by Model</h5>
+        <canvas id="ndcgChart" style="max-height:280px;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Methodology note -->
+  <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937; margin-bottom:2rem;">
+    <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.8rem;">Methodology</h5>
+    <ul style="color:#9ca3af; font-size:0.85rem; line-height:1.9; padding-left:1.2rem;">
+      <li><strong style="color:var(--text);">Train/Test split:</strong> 80/20 stratified by user ID. Seed = 42.</li>
+      <li><strong style="color:var(--text);">Relevance threshold:</strong> Rating ≥ 7 is considered a "liked" book.</li>
+      <li><strong style="color:var(--text);">RMSE:</strong> Root Mean Squared Error on rating predictions for the test set.</li>
+      <li><strong style="color:var(--text);">Precision@10:</strong> Fraction of top-10 recommendations that are relevant, averaged across test users.</li>
+      <li><strong style="color:var(--text);">NDCG@10:</strong> Normalised Discounted Cumulative Gain at rank 10 — rewards correct items ranked higher.</li>
+      <li><strong style="color:var(--text);">Sentiment correction:</strong> VADER compound score applied as soft rating adjustment (α=0.5) before training.</li>
+    </ul>
+  </div>
+
+  {% else %}
+  <div class="alert-warn-dark text-center" style="max-width:600px; margin: 2rem auto;">
+    <i class="fas fa-exclamation-triangle" style="margin-right:0.5rem;"></i>
+    No evaluation results found.<br>
+    Run <code>python manage.py train_models</code> to train all models and generate metrics.
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if has_results %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+const modelNames = [{% for m in models %}"{{ m.name }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+const precisions = [{% for m in models %}{% for k,v in m.metrics.items %}{% if "precision" in k %}{{ v|default:0 }}{% if not forloop.last %},{% endif %}{% endif %}{% endfor %}{% if not forloop.last %},{% endif %}{% endfor %}];
+const ndcgs = [{% for m in models %}{% for k,v in m.metrics.items %}{% if "ndcg" in k %}{{ v|default:0 }}{% if not forloop.last %},{% endif %}{% endif %}{% endfor %}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+const COLORS = ['#6366f1','#f59e0b','#b81024','#22c55e','#06b6d4'];
+
+function barChart(id, data, label) {
+  new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: {
+      labels: modelNames,
+      datasets: [{
+        label,
+        data,
+        backgroundColor: COLORS.slice(0, modelNames.length),
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#9ca3af' }, grid: { color: '#1f2937' }, max: 1 },
+        y: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+barChart('precisionChart', precisions, 'Precision@10');
+barChart('ndcgChart', ndcgs, 'NDCG@10');
+</script>
+{% endif %}
+{% endblock %}

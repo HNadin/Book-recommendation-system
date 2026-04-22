@@ -1,10 +1,51 @@
 {% extends 'base.html' %}
-{% block content %}
-<div class="text-center my-4">
-    <p class="lead">
-        This application provides personalized book recommendations based on user ratings and book content.
-        It leverages both collaborative filtering and content-based filtering techniques to suggest books that you might enjoy.
-    </p>
-</div>
+{% block title %}Recommendations — BOOKFLIX{% endblock %}
 
+{% block content %}
+<div class="container-fluid" style="max-width:900px; padding: 0 1.5rem;">
+
+  <div class="page-header">
+    <h1><i class="fas fa-magic" style="margin-right:0.5rem;"></i>Personalised Recommendations</h1>
+  </div>
+
+  <!-- User ID form -->
+  <div style="background:#141414; border-radius:14px; padding:1.8rem; border:1px solid #1f2937; margin-bottom:1.5rem; text-align:center;">
+    <p style="color:#9ca3af; font-size:0.88rem; margin-bottom:1rem;">Enter a Book-Crossing user ID to view their reading history or get personalised recommendations.</p>
+    <div class="d-flex justify-content-center align-items-center flex-wrap" style="gap:0.75rem;">
+      <input type="text" id="user_id_input" class="bookflix-input" placeholder="User ID e.g. 239106" style="width:200px;">
+      <button class="btn-crimson" onclick="goRatings()">View Ratings</button>
+      <button class="btn-crimson" style="background:#1d4ed8;" onclick="goRecommendations()">Get Recommendations</button>
+    </div>
+  </div>
+
+  <!-- Sample user IDs -->
+  <div style="text-align:center; margin-bottom:2rem;">
+    <p style="color:#6b7280; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.6rem;">Users with 5+ ratings:</p>
+    {% for id in random_user_ids %}
+    <a class="uid-btn" href="{% url 'user_ratings' id %}">{{ id }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="alert-info-dark" style="max-width:600px; margin: 0 auto;">
+    <i class="fas fa-info-circle" style="margin-right:0.5rem;"></i>
+    Recommendations use the <strong>NCF + LSA Feature Combination</strong> hybrid (Section 2.4).
+    Append <code>?sentiment=1</code> to the URL to enable VADER rating correction (Section 2.5).
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function goRatings() {
+  const id = document.getElementById('user_id_input').value.trim();
+  if (!id) { alert('Please enter a user ID.'); return; }
+  window.location.href = `/ratings/${id}/`;
+}
+function goRecommendations() {
+  const id = document.getElementById('user_id_input').value.trim();
+  if (!id) { alert('Please enter a user ID.'); return; }
+  window.location.href = `/recommendations/${id}/`;
+}
+</script>
 {% endblock %}

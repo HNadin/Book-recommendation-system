@@ -120,16 +120,22 @@
             <thead>
               <tr>
                 <th>Model</th>
-                {% for key in eval_results.values|first %}<th>{{ key }}</th>{% endfor %}
+                <th>RMSE</th>
+                <th>Precision@K</th>
+                <th>NDCG@K</th>
               </tr>
             </thead>
             <tbody>
               {% for model_name, metrics in eval_results.items %}
               <tr>
                 <td>{{ model_name }}</td>
-                {% for val in metrics.values %}
-                <td>{% if val is not None %}{{ val }}{% else %}—{% endif %}</td>
-                {% endfor %}
+                <td>{% if metrics.rmse %}{{ metrics.rmse }}{% else %}—{% endif %}</td>
+                <td>
+                  {% for key, val in metrics.items %}{% if "precision" in key %}{{ val }}{% endif %}{% endfor %}
+                </td>
+                <td>
+                  {% for key, val in metrics.items %}{% if "ndcg" in key %}{{ val }}{% endif %}{% endfor %}
+                </td>
               </tr>
               {% endfor %}
             </tbody>

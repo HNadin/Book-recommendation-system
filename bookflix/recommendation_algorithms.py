@@ -205,3 +205,69 @@ def evaluate_user_model(user_id: int, ratings_df: pd.DataFrame) -> tuple:
 
     rmse = compute_rmse(actuals, preds)
     return {"rmse": round(rmse, 4)}, None
+
+
+# ---------------------------------------------------------------------------
+# Backward-compatibility shims
+# Old views.py / management commands may import these names.
+# ---------------------------------------------------------------------------
+
+def compute_average_ratings():
+    return load_books_df()
+
+
+def build_tfidf_matrix():
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.neighbors import NearestNeighbors
+    books = load_books_df()
+    tfidf = TfidfVectorizer(stop_words="english", max_features=1000)
+    matrix = tfidf.fit_transform(books["title"].fillna(""))
+    return matrix, books
+
+
+def load_or_compute_nn(tfidf_matrix):
+    from sklearn.neighbors import NearestNeighbors
+    nn = NearestNeighbors(metric="cosine", algorithm="brute")
+    nn.fit(tfidf_matrix)
+    return nn
+
+
+def load_or_compute_svd(ratings_df):
+    from surprise import Dataset, Reader, SVD as SurpriseSVD
+    reader = Reader(rating_scale=(1, 10))
+    data = Dataset.load_from_df(
+        ratings_df[["user_id", "book__isbn", "book_rating"]], reader
+    )
+    svd = SurpriseSVD(random_state=SEED)
+    svd.fit(data.build_full_trainset())
+    return svd
+
+
+def content_based_recommendations(user_id, ratings_df, tfidf_matrix, books, nn,
+                                   num_recommendations=10):
+    from bookflix.ml.embeddings import LSAEmbedder
+    embedder = load_embedder()
+    if embedder is None:
+        return books.head(num_recommendations)
+    rated = set(get_user_all_rated_isbns(user_id, ratings_df))
+    liked = get_user_rated_isbns(user_id, ratings_df)
+    profile = embedder.build_user_profile(liked)
+    if profile is None:
+        return books.head(num_recommendations)
+    import numpy as np
+    candidates = books[~books["isbn"].isin(rated)].copy()
+    vecs = np.stack([embedder.get(isbn) for isbn in candidates["isbn"]])
+    candidates["_sim"] = vecs @ profile
+    return candidates.nlargest(num_recommendations, "_sim")
+
+
+def collaborative_filtering_recommendations(user_id, ratings_df, svd,
+                                            num_recommendations=10):
+    rated = set(get_user_all_rated_isbns(user_id, ratings_df))
+    all_isbns = ratings_df["book__isbn"].unique()
+    unrated = [i for i in all_isbns if i not in rated]
+    preds = sorted([(i, svd.predict(user_id, i).est) for i in unrated],
+                   key=lambda x: x[1], reverse=True)
+    top = [isbn for isbn, _ in preds[:num_recommendations]]
+    from bookflix.models import Book
+    return Book.objects.filter(isbn__in=top)

@@ -157,10 +157,19 @@
 
 <nav class="bookflix-nav">
   <a class="bookflix-logo" href="{% url 'home' %}">BOOKFLIX</a>
-  <div>
-    <a class="nav-link d-inline {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
-    <a class="nav-link d-inline {% if request.resolver_match.url_name == 'ratingsrecommend' %}active{% endif %}" href="{% url 'ratingsrecommend' %}">Recommend</a>
-    <a class="nav-link d-inline {% if request.resolver_match.url_name == 'evaluate' %}active{% endif %}" href="{% url 'evaluate' %}">Evaluation</a>
+  <div style="display:flex;align-items:center;gap:.25rem;">
+    <a class="nav-link d-inline {% if request.resolver_match.url_name == 'taste' %}active{% endif %}" href="{% url 'taste' %}">
+      <i class="fas fa-sliders-h" style="margin-right:.3rem;"></i>Смак
+    </a>
+    <a class="nav-link d-inline {% if request.resolver_match.url_name == 'my_recommendations' %}active{% endif %}" href="{% url 'my_recommendations' %}">
+      <i class="fas fa-magic" style="margin-right:.3rem;"></i>Рекомендації
+    </a>
+    <a class="nav-link d-inline {% if request.resolver_match.url_name == 'explore' %}active{% endif %}" href="{% url 'explore' %}">
+      <i class="fas fa-search" style="margin-right:.3rem;"></i>Пошук
+    </a>
+    <span style="color:#374151;margin:0 .25rem;">|</span>
+    <a class="nav-link d-inline {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Дашборд</a>
+    <a class="nav-link d-inline {% if request.resolver_match.url_name == 'evaluate' %}active{% endif %}" href="{% url 'evaluate' %}">Оцінка</a>
   </div>
 </nav>
 

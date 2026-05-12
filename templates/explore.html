@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block title %}Пошук книг — BOOKFLIX{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width:1100px;padding:0 1.5rem;">
+
+  <div class="page-header">
+    <h1><i class="fas fa-search" style="margin-right:.5rem;"></i>Пошук книг</h1>
+  </div>
+
+  <!-- Пошуковий рядок -->
+  <form method="get" action="{% url 'explore' %}" style="max-width:600px;margin:0 auto 2rem;">
+    <div style="display:flex;gap:.6rem;">
+      <input type="text" name="q" value="{{ query }}" placeholder="Назва або автор…"
+             class="bookflix-input" style="flex:1;font-size:1rem;">
+      <button type="submit" class="btn-crimson" style="padding:.5rem 1.5rem;">Знайти</button>
+    </div>
+  </form>
+
+  {% if search_results %}
+  <div style="background:#141414;border-radius:14px;padding:1.2rem;border:1px solid #1f2937;margin-bottom:2rem;">
+    <h5 style="color:#9ca3af;font-size:.82rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem;">
+      Результати пошуку «{{ query }}»
+    </h5>
+    <div class="cards-grid">
+      {% for b in search_results %}
+      <div class="book-card">
+        <a href="{% url 'explore' %}?isbn={{ b.isbn }}{% if query %}&q={{ query }}{% endif %}" style="text-decoration:none;">
+          {% if b.image_url_m %}<img src="{{ b.image_url_m }}" alt="{{ b.title }}">
+          {% else %}<div style="width:100%;height:200px;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#4b5563;font-size:2rem;"><i class="fas fa-book"></i></div>{% endif %}
+        </a>
+        <div class="card-info">
+          <div class="card-title">{{ b.title|truncatechars:40 }}</div>
+          <div class="card-author">{{ b.author }}</div>
+          {% include 'partials/rating_badges.html' with bx_rating=b.bx_rating bx_count=b.bx_count goodreads=b.goodreads %}
+          {% include 'partials/rate_buttons.html' with isbn=b.isbn user_rating=b.user_rating %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% elif query %}
+  <div class="alert-warn-dark" style="max-width:500px;margin:0 auto 2rem;text-align:center;">
+    Нічого не знайдено за запитом «{{ query }}».
+  </div>
+  {% endif %}
+
+  {% if selected %}
+  <!-- Деталі вибраної книги -->
+  <div style="background:#141414;border-radius:14px;padding:1.5rem;border:1px solid #1f2937;margin-bottom:2rem;">
+    <div class="row" style="gap:0;">
+      <div class="col-md-2 mb-3 mb-md-0">
+        {% if selected.image_url_m %}
+        <img src="{{ selected.image_url_m }}" alt="{{ selected.title }}" style="width:100%;border-radius:8px;">
+        {% endif %}
+      </div>
+      <div class="col-md-10" style="padding-left:1.5rem;">
+        <h3 style="color:var(--text);font-weight:800;margin-bottom:.3rem;">{{ selected.title }}</h3>
+        <p style="color:#9ca3af;margin-bottom:.8rem;">{{ selected.author }}{% if selected.year_of_publication %} · {{ selected.year_of_publication }}{% endif %}</p>
+        {% include 'partials/rating_badges.html' with bx_rating=selected.bx_rating bx_count=selected.bx_count goodreads=selected.goodreads large=True %}
+        <div style="margin-top:1rem;">
+          {% include 'partials/rate_buttons.html' with isbn=selected.isbn user_rating=selected.user_rating large=True %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Семантично схожі книги -->
+  {% if neighbours %}
+  <div style="background:#141414;border-radius:14px;padding:1.2rem;border:1px solid #1f2937;margin-bottom:2rem;">
+    <h5 style="color:#9ca3af;font-size:.82rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem;">
+      Семантично схожі книги <span style="color:#4b5563;font-weight:400;">(LSA-ембедінги, Section 2.2)</span>
+    </h5>
+    <div class="cards-grid">
+      {% for nb in neighbours %}
+      <div class="book-card">
+        <a href="{% url 'explore' %}?isbn={{ nb.isbn }}{% if query %}&q={{ query }}{% endif %}" style="text-decoration:none;">
+          {% if nb.image_url_m %}<img src="{{ nb.image_url_m }}" alt="{{ nb.title }}">
+          {% else %}<div style="width:100%;height:200px;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#4b5563;font-size:2rem;"><i class="fas fa-book"></i></div>{% endif %}
+        </a>
+        <div class="card-info">
+          <div class="card-title">{{ nb.title|truncatechars:40 }}</div>
+          <div class="card-author">{{ nb.author }}</div>
+          <div class="card-score" style="color:#6366f1;">схожість: {{ nb.score }}</div>
+          {% include 'partials/rating_badges.html' with bx_rating=nb.bx_rating goodreads=nb.goodreads %}
+          {% include 'partials/rate_buttons.html' with isbn=nb.isbn user_rating=nb.user_rating %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  {% if not query and not selected_isbn %}
+  <div style="text-align:center;padding:3rem 0;color:#4b5563;">
+    <i class="fas fa-search" style="font-size:3rem;margin-bottom:1rem;display:block;"></i>
+    Введи назву або автора книги у рядку вище.
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCsrf() {
+  const c = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+  return c ? c.trim().split('=')[1] : '';
+}
+async function rate(isbn, rating) {
+  await fetch("{% url 'api_session_rate' %}", {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+    body: JSON.stringify({isbn, rating}),
+  });
+  // Оновлюємо кнопки візуально
+  document.querySelectorAll(`.rate-mini[data-isbn="${isbn}"]`).forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.rating) === rating);
+  });
+}
+</script>
+{% endblock %}

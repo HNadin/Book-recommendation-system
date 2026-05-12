@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% block title %}Сформуй свій смак — BOOKFLIX{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width:1200px; padding:0 1.5rem;">
+
+  <div class="page-header">
+    <h1><i class="fas fa-sliders-h" style="margin-right:.5rem;"></i>Сформуй свій смак</h1>
+  </div>
+
+  <p style="text-align:center;color:#9ca3af;font-size:.88rem;margin-bottom:1.5rem;">
+    Оціни книги — і система підбере рекомендації саме для тебе.<br>
+    Потрібно щонайменше <strong style="color:var(--crimson);">{{ min_ratings }}</strong> оцінки.
+  </p>
+
+  <!-- Прогрес-бар -->
+  <div style="max-width:500px;margin:0 auto 1.5rem;">
+    <div style="display:flex;justify-content:space-between;font-size:.78rem;color:#6b7280;margin-bottom:.4rem;">
+      <span>Оцінено книг: <strong id="rated-count" style="color:var(--crimson);">{{ profile_count }}</strong></span>
+      <span>{% if ready %}<a href="{% url 'my_recommendations' %}" style="color:#22c55e;font-weight:700;">Отримати рекомендації →</a>{% else %}Ще {{ min_ratings|add:"-"|add:profile_count }} …{% endif %}</span>
+    </div>
+    <div style="background:#1f2937;border-radius:999px;height:6px;overflow:hidden;">
+      <div id="progress-bar" style="background:var(--crimson);height:100%;border-radius:999px;transition:width .3s;width:{% if profile_count >= min_ratings %}100{% else %}{% widthratio profile_count min_ratings 100 %}{% endif %}%;"></div>
+    </div>
+  </div>
+
+  <!-- Кнопка рекомендацій (з'являється коли готово) -->
+  <div id="rec-banner" style="text-align:center;margin-bottom:1.5rem;display:{% if ready %}block{% else %}none{% endif %};">
+    <a href="{% url 'my_recommendations' %}" class="btn-crimson" style="font-size:1rem;padding:.75rem 2.5rem;border-radius:50px;">
+      <i class="fas fa-magic" style="margin-right:.5rem;"></i>Отримати рекомендації
+    </a>
+  </div>
+
+  <div class="row" style="gap:0;">
+
+    <!-- Ліва колонка: книги для оцінювання -->
+    <div class="col-lg-8">
+      <div style="background:#141414;border-radius:14px;padding:1.2rem;border:1px solid #1f2937;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h5 style="color:#9ca3af;font-size:.82rem;text-transform:uppercase;letter-spacing:1px;margin:0;">Оціни ці книги</h5>
+          <a href="{% url 'explore' %}" style="font-size:.8rem;color:var(--crimson);">Шукати конкретну книгу →</a>
+        </div>
+        <div class="cards-grid" id="books-grid">
+          {% for book in books %}
+          <div class="taste-card" data-isbn="{{ book.isbn }}" id="card-{{ book.isbn }}">
+            <div class="taste-cover">
+              {% if book.image_url_m %}
+              <img src="{{ book.image_url_m }}" alt="{{ book.title }}" loading="lazy">
+              {% else %}
+              <div class="no-cover"><i class="fas fa-book"></i></div>
+              {% endif %}
+            </div>
+            <div class="taste-info">
+              <div class="taste-title">{{ book.title|truncatechars:40 }}</div>
+              <div class="taste-author">{{ book.author }}</div>
+            </div>
+            <div class="taste-actions">
+              <button class="rate-btn like-btn" onclick="rate('{{ book.isbn }}', 8)" title="Подобається">👍</button>
+              <button class="rate-btn skip-btn" onclick="rate('{{ book.isbn }}', 5)" title="Нейтрально">😐</button>
+              <button class="rate-btn dislike-btn" onclick="rate('{{ book.isbn }}', 2)" title="Не подобається">👎</button>
+            </div>
+          </div>
+          {% empty %}
+          <p style="color:#6b7280;font-size:.85rem;">Книги з обкладинками не знайдено — спробуй пошук.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Права колонка: вже оцінені книги -->
+    <div class="col-lg-4 mt-3 mt-lg-0" style="padding-left:1rem;">
+      <div style="background:#141414;border-radius:14px;padding:1.2rem;border:1px solid #1f2937;position:sticky;top:80px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h5 style="color:#9ca3af;font-size:.82rem;text-transform:uppercase;letter-spacing:1px;margin:0;">Твій профіль</h5>
+          {% if rated_books %}
+          <button onclick="clearProfile()" style="background:none;border:1px solid #374151;color:#6b7280;border-radius:6px;padding:2px 8px;font-size:.75rem;cursor:pointer;">Очистити</button>
+          {% endif %}
+        </div>
+
+        <div id="rated-list">
+          {% if rated_books %}
+          {% for item in rated_books %}
+          <div class="rated-item" id="rated-{{ item.book.isbn }}">
+            {% if item.book.image_url_m %}<img src="{{ item.book.image_url_m }}" alt="">{% endif %}
+            <div class="rated-meta">
+              <div class="rated-title">{{ item.book.title|truncatechars:30 }}</div>
+              <div class="rated-score">
+                {% if item.rating >= 7 %}👍{% elif item.rating >= 5 %}😐{% else %}👎{% endif %}
+                {{ item.rating }}/10
+              </div>
+            </div>
+            <button class="remove-btn" onclick="rate('{{ item.book.isbn }}', null)" title="Видалити">×</button>
+          </div>
+          {% endfor %}
+          {% else %}
+          <p id="empty-profile" style="color:#4b5563;font-size:.82rem;text-align:center;padding:1rem 0;">
+            Ще нічого не оцінено.<br>Клікай 👍 / 😐 / 👎 на книгах зліва.
+          </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+  .taste-card {
+    width: 150px;
+    background: var(--surface2);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: border-color .2s, transform .2s;
+    flex-shrink: 0;
+  }
+  .taste-card.rated-like  { border-color: #22c55e; }
+  .taste-card.rated-skip  { border-color: #f59e0b; }
+  .taste-card.rated-dislike { border-color: #ef4444; }
+  .taste-cover { width:100%; height:190px; overflow:hidden; }
+  .taste-cover img { width:100%; height:100%; object-fit:cover; display:block; }
+  .no-cover { width:100%; height:190px; background:#1f2937; display:flex; align-items:center; justify-content:center; color:#4b5563; font-size:2rem; }
+  .taste-info { padding:.5rem .6rem .2rem; }
+  .taste-title { font-size:.75rem; font-weight:700; color:var(--text); line-height:1.3; }
+  .taste-author { font-size:.68rem; color:#9ca3af; margin-top:2px; }
+  .taste-actions { display:flex; justify-content:space-around; padding:.4rem .3rem .6rem; }
+  .rate-btn { background:none; border:none; font-size:1.3rem; cursor:pointer; padding:0 .2rem; transition:transform .15s; line-height:1; }
+  .rate-btn:hover { transform:scale(1.3); }
+
+  .rated-item { display:flex; align-items:center; gap:.6rem; padding:.5rem 0; border-bottom:1px solid #1f2937; }
+  .rated-item:last-child { border-bottom:none; }
+  .rated-item img { width:36px; height:48px; object-fit:cover; border-radius:4px; flex-shrink:0; }
+  .rated-meta { flex:1; min-width:0; }
+  .rated-title { font-size:.75rem; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rated-score { font-size:.7rem; color:#9ca3af; margin-top:1px; }
+  .remove-btn { background:none; border:none; color:#4b5563; font-size:1.1rem; cursor:pointer; flex-shrink:0; padding:0 .2rem; line-height:1; }
+  .remove-btn:hover { color:#ef4444; }
+</style>
+
+<script>
+const MIN = {{ min_ratings }};
+let count = {{ profile_count }};
+
+function getCsrf() {
+  const c = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+  return c ? c.trim().split('=')[1] : '';
+}
+
+async function rate(isbn, rating) {
+  const res = await fetch("{% url 'api_session_rate' %}", {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
+    body: JSON.stringify({isbn, rating}),
+  });
+  const data = await res.json();
+  count = data.profile_count;
+  updateProgress(count, data.ready);
+
+  const card = document.getElementById('card-' + isbn);
+  if (card) {
+    if (rating === null) {
+      card.classList.remove('rated-like','rated-skip','rated-dislike');
+    } else if (rating >= 7) {
+      card.classList.add('rated-like');
+      card.classList.remove('rated-skip','rated-dislike');
+    } else if (rating >= 5) {
+      card.classList.add('rated-skip');
+      card.classList.remove('rated-like','rated-dislike');
+    } else {
+      card.classList.add('rated-dislike');
+      card.classList.remove('rated-like','rated-skip');
+    }
+  }
+
+  if (rating === null) {
+    const ri = document.getElementById('rated-' + isbn);
+    if (ri) ri.remove();
+    if (count === 0) {
+      const ep = document.getElementById('empty-profile');
+      if (!ep) {
+        document.getElementById('rated-list').innerHTML =
+          '<p id="empty-profile" style="color:#4b5563;font-size:.82rem;text-align:center;padding:1rem 0;">Ще нічого не оцінено.<br>Клікай 👍 / 😐 / 👎 на книгах зліва.</p>';
+      }
+    }
+  } else {
+    updateRatedList(isbn, rating);
+  }
+}
+
+function updateRatedList(isbn, rating) {
+  const ep = document.getElementById('empty-profile');
+  if (ep) ep.remove();
+  let ri = document.getElementById('rated-' + isbn);
+  if (ri) {
+    ri.querySelector('.rated-score').textContent = (rating >= 7 ? '👍' : rating >= 5 ? '😐' : '👎') + ' ' + rating + '/10';
+    return;
+  }
+  const cards = document.querySelectorAll('.taste-card');
+  let img = '', title = '', author = '';
+  cards.forEach(c => {
+    if (c.dataset.isbn === isbn) {
+      const i = c.querySelector('img');
+      img = i ? i.src : '';
+      title = c.querySelector('.taste-title')?.textContent || '';
+      author = c.querySelector('.taste-author')?.textContent || '';
+    }
+  });
+  const icon = rating >= 7 ? '👍' : rating >= 5 ? '😐' : '👎';
+  const html = `<div class="rated-item" id="rated-${isbn}">
+    ${img ? `<img src="${img}" alt="">` : ''}
+    <div class="rated-meta">
+      <div class="rated-title">${title}</div>
+      <div class="rated-score">${icon} ${rating}/10</div>
+    </div>
+    <button class="remove-btn" onclick="rate('${isbn}', null)" title="Видалити">×</button>
+  </div>`;
+  document.getElementById('rated-list').insertAdjacentHTML('afterbegin', html);
+}
+
+function updateProgress(n, ready) {
+  document.getElementById('rated-count').textContent = n;
+  const pct = Math.min(100, Math.round(n / MIN * 100));
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('rec-banner').style.display = ready ? 'block' : 'none';
+}
+
+async function clearProfile() {
+  await fetch("{% url 'api_session_clear' %}", {
+    method: 'POST',
+    headers: {'X-CSRFToken': getCsrf()},
+  });
+  window.location.reload();
+}
+</script>
+{% endblock %}

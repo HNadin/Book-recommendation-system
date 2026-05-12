@@ -1,0 +1,18 @@
+{% comment %}
+Відображає рейтинги Book-Crossing і Goodreads.
+Параметри: bx_rating, bx_count, goodreads (dict з rating/count), large (bool)
+{% endcomment %}
+{% if bx_rating %}
+<div style="font-size:{% if large %}.9rem{% else %}.72rem{% endif %};color:#9ca3af;margin-top:3px;">
+  <span title="Book-Crossing">📚</span>
+  <strong style="color:var(--text);">{{ bx_rating }}</strong>/10
+  {% if bx_count %}<span style="color:#4b5563;"> · {{ bx_count }} оц.</span>{% endif %}
+</div>
+{% endif %}
+{% if goodreads and goodreads.rating %}
+<div style="font-size:{% if large %}.9rem{% else %}.72rem{% endif %};color:#9ca3af;margin-top:2px;">
+  <span title="Goodreads">🌟</span>
+  <strong style="color:var(--text);">{{ goodreads.rating }}</strong>/5
+  {% if goodreads.count %}<span style="color:#4b5563;"> · {{ goodreads.count }} оц.</span>{% endif %}
+</div>
+{% endif %}

@@ -60,6 +60,81 @@ def load_books_df() -> pd.DataFrame:
     return books
 
 
+def get_session_recommendations(
+    session_ratings: dict,
+    books_df: pd.DataFrame,
+    top_n: int = 10,
+) -> list:
+    """
+    Рекомендації для сесійного користувача без NCF-ID (cold-start, Section 2.4).
+    Будує профіль з вподобаних книг через LSA-ембедінги,
+    відраховує нелюбляні, повертає топ-N за косинусною схожістю.
+
+    session_ratings: {isbn: rating_1_to_10}
+    """
+    embedder = load_embedder()
+    rated_set = set(session_ratings.keys())
+
+    if embedder is None or not session_ratings:
+        popular = books_df[~books_df["isbn"].isin(rated_set)].sort_values(
+            "avg_rating", ascending=False
+        )
+        return [
+            {"isbn": row["isbn"], "score": round(float(row["avg_rating"]), 3), "method": "popularity"}
+            for _, row in popular.head(top_n).iterrows()
+        ]
+
+    liked = [isbn for isbn, r in session_ratings.items() if r >= 7]
+    disliked = [isbn for isbn, r in session_ratings.items() if r <= 4]
+    if not liked:
+        liked = list(session_ratings.keys())
+
+    user_profile = embedder.build_user_profile(liked)
+    if user_profile is None:
+        return []
+
+    if disliked:
+        dislike_vec = embedder.build_user_profile(disliked)
+        if dislike_vec is not None:
+            user_profile = user_profile - 0.3 * dislike_vec
+            norm = np.linalg.norm(user_profile)
+            if norm > 0:
+                user_profile = user_profile / norm
+
+    candidates = [isbn for isbn in books_df["isbn"].tolist() if isbn not in rated_set]
+    if not candidates:
+        return []
+
+    book_vecs = np.stack([embedder.get(isbn) for isbn in candidates])
+    sims = book_vecs @ user_profile
+    top_idx = np.argsort(sims)[::-1][:top_n]
+    return [
+        {"isbn": candidates[i], "score": round(float(sims[i]), 3), "method": "semantic"}
+        for i in top_idx
+    ]
+
+
+def get_book_semantic_neighbours(isbn: str, books_df: pd.DataFrame, top_n: int = 10) -> list:
+    """Повертає семантично схожі книги для конкретного ISBN."""
+    embedder = load_embedder()
+    if embedder is None:
+        return []
+    emb = embedder.get(isbn)
+    if not np.any(emb):
+        return []
+    all_isbns = books_df["isbn"].tolist()
+    book_vecs = np.stack([embedder.get(i) for i in all_isbns])
+    sims = book_vecs @ emb
+    top_idx = np.argsort(sims)[::-1]
+    results = []
+    for i in top_idx:
+        if all_isbns[i] != isbn:
+            results.append({"isbn": all_isbns[i], "score": round(float(sims[i]), 3)})
+        if len(results) == top_n:
+            break
+    return results
+
+
 def train_test_split(ratings_df: pd.DataFrame, test_ratio: float = 0.2):
     """
     Stratified user split: 80 % of users → train, 20 % → test.

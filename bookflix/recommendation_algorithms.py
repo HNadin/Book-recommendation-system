@@ -66,15 +66,31 @@ def get_session_recommendations(
     top_n: int = 10,
 ) -> list:
     """
-    Рекомендації для сесійного користувача без NCF-ID (cold-start, Section 2.4).
-    Будує профіль з вподобаних книг через LSA-ембедінги,
-    відраховує нелюбляні, повертає топ-N за косинусною схожістю.
+    Гібридні рекомендації для сесійного користувача (cold-start, Section 2.4).
+
+    Оскільки сесійний користувач відсутній у навчальній вибірці NCF,
+    його ID немає в ембедінгах моделі. Тому застосовується гібрид:
+
+        score = W_SEM × semantic_sim + W_POP × normalized_avg_rating
+
+    де:
+      semantic_sim     — косинусна схожість між LSA-профілем користувача
+                         (середній вектор вподобаних книг мінус вектор нелюбляних)
+                         та LSA-вектором кандидата
+      normalized_avg_rating — середній рейтинг книги в БД, нормалізований до [0,1],
+                              виступає як колаборативний сигнал без явного NCF-ID
+
+    Це і є демонстрація cold-start обробки з розділу 2.4 диплому.
 
     session_ratings: {isbn: rating_1_to_10}
     """
+    W_SEM = 0.65
+    W_POP = 0.35
+
     embedder = load_embedder()
     rated_set = set(session_ratings.keys())
 
+    # --- Запасний варіант: лише популярність ---
     if embedder is None or not session_ratings:
         popular = books_df[~books_df["isbn"].isin(rated_set)].sort_values(
             "avg_rating", ascending=False
@@ -84,15 +100,18 @@ def get_session_recommendations(
             for _, row in popular.head(top_n).iterrows()
         ]
 
+    # --- Будуємо профіль користувача ---
     liked = [isbn for isbn, r in session_ratings.items() if r >= 7]
-    disliked = [isbn for isbn, r in session_ratings.items() if r <= 4]
+    disliked = [isbn for isbn, r in session_ratings.items() if r <= 3]
     if not liked:
+        # Якщо лайків немає — беремо все оцінене як базу
         liked = list(session_ratings.keys())
 
     user_profile = embedder.build_user_profile(liked)
     if user_profile is None:
         return []
 
+    # Віднімаємо нелюбляні книги (контр-сигнал)
     if disliked:
         dislike_vec = embedder.build_user_profile(disliked)
         if dislike_vec is not None:
@@ -101,15 +120,44 @@ def get_session_recommendations(
             if norm > 0:
                 user_profile = user_profile / norm
 
-    candidates = [isbn for isbn in books_df["isbn"].tolist() if isbn not in rated_set]
-    if not candidates:
+    # --- Кандидати ---
+    candidates_df = books_df[~books_df["isbn"].isin(rated_set)].copy()
+    if candidates_df.empty:
         return []
 
-    book_vecs = np.stack([embedder.get(isbn) for isbn in candidates])
-    sims = book_vecs @ user_profile
-    top_idx = np.argsort(sims)[::-1][:top_n]
+    candidate_isbns = candidates_df["isbn"].tolist()
+    book_vecs = np.stack([embedder.get(isbn) for isbn in candidate_isbns])
+
+    # --- Семантичний компонент ---
+    sem_scores = book_vecs @ user_profile
+
+    # --- Популярнісний / якісний компонент (нормалізований avg_rating) ---
+    avg_ratings = candidates_df["avg_rating"].values.astype(float)
+    max_r, min_r = avg_ratings.max(), avg_ratings.min()
+    if max_r > min_r:
+        pop_scores = (avg_ratings - min_r) / (max_r - min_r)
+    else:
+        pop_scores = np.zeros_like(avg_ratings)
+
+    # --- Нормалізуємо семантичний компонент до [0,1] ---
+    sem_min, sem_max = sem_scores.min(), sem_scores.max()
+    if sem_max > sem_min:
+        sem_norm = (sem_scores - sem_min) / (sem_max - sem_min)
+    else:
+        sem_norm = np.zeros_like(sem_scores)
+
+    # --- Об'єднуємо ---
+    combined = W_SEM * sem_norm + W_POP * pop_scores
+    top_idx = np.argsort(combined)[::-1][:top_n]
+
     return [
-        {"isbn": candidates[i], "score": round(float(sims[i]), 3), "method": "semantic"}
+        {
+            "isbn": candidate_isbns[i],
+            "score": round(float(combined[i]), 3),
+            "sem_score": round(float(sem_scores[i]), 3),
+            "pop_score": round(float(pop_scores[i]), 3),
+            "method": "semantic+popularity hybrid",
+        }
         for i in top_idx
     ]
 

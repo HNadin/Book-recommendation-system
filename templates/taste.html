@@ -9,7 +9,7 @@
   </div>
 
   <p style="text-align:center;color:#9ca3af;font-size:.88rem;margin-bottom:1.5rem;">
-    Оціни книги — і система підбере рекомендації саме для тебе.<br>
+    Постав оцінку від 1 до 10 книгам, які читав(ла) — система підбере рекомендації саме для тебе.<br>
     Потрібно щонайменше <strong style="color:var(--crimson);">{{ min_ratings }}</strong> оцінки.
   </p>
 
@@ -17,14 +17,14 @@
   <div style="max-width:500px;margin:0 auto 1.5rem;">
     <div style="display:flex;justify-content:space-between;font-size:.78rem;color:#6b7280;margin-bottom:.4rem;">
       <span>Оцінено книг: <strong id="rated-count" style="color:var(--crimson);">{{ profile_count }}</strong></span>
-      <span>{% if ready %}<a href="{% url 'my_recommendations' %}" style="color:#22c55e;font-weight:700;">Отримати рекомендації →</a>{% else %}Ще {{ min_ratings|add:"-"|add:profile_count }} …{% endif %}</span>
+      <span>{% if ready %}<a href="{% url 'my_recommendations' %}" style="color:#22c55e;font-weight:700;">Отримати рекомендації →</a>{% else %}Потрібно ще {{ min_ratings }} оцінок…{% endif %}</span>
     </div>
     <div style="background:#1f2937;border-radius:999px;height:6px;overflow:hidden;">
       <div id="progress-bar" style="background:var(--crimson);height:100%;border-radius:999px;transition:width .3s;width:{% if profile_count >= min_ratings %}100{% else %}{% widthratio profile_count min_ratings 100 %}{% endif %}%;"></div>
     </div>
   </div>
 
-  <!-- Кнопка рекомендацій (з'являється коли готово) -->
+  <!-- Кнопка рекомендацій -->
   <div id="rec-banner" style="text-align:center;margin-bottom:1.5rem;display:{% if ready %}block{% else %}none{% endif %};">
     <a href="{% url 'my_recommendations' %}" class="btn-crimson" style="font-size:1rem;padding:.75rem 2.5rem;border-radius:50px;">
       <i class="fas fa-magic" style="margin-right:.5rem;"></i>Отримати рекомендації
@@ -37,8 +37,15 @@
     <div class="col-lg-8">
       <div style="background:#141414;border-radius:14px;padding:1.2rem;border:1px solid #1f2937;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-          <h5 style="color:#9ca3af;font-size:.82rem;text-transform:uppercase;letter-spacing:1px;margin:0;">Оціни ці книги</h5>
-          <a href="{% url 'explore' %}" style="font-size:.8rem;color:var(--crimson);">Шукати конкретну книгу →</a>
+          <h5 style="color:#9ca3af;font-size:.82rem;text-transform:uppercase;letter-spacing:1px;margin:0;">
+            Постав оцінку 1–10
+            <span style="font-weight:400;color:#4b5563;margin-left:.5rem;">
+              <span style="color:#ef4444;">1–3</span> погано ·
+              <span style="color:#f59e0b;">4–6</span> нормально ·
+              <span style="color:#22c55e;">7–10</span> чудово
+            </span>
+          </h5>
+          <a href="{% url 'explore' %}" style="font-size:.8rem;color:var(--crimson);">Знайти конкретну книгу →</a>
         </div>
         <div class="cards-grid" id="books-grid">
           {% for book in books %}
@@ -51,13 +58,15 @@
               {% endif %}
             </div>
             <div class="taste-info">
-              <div class="taste-title">{{ book.title|truncatechars:40 }}</div>
+              <div class="taste-title">{{ book.title|truncatechars:38 }}</div>
               <div class="taste-author">{{ book.author }}</div>
             </div>
-            <div class="taste-actions">
-              <button class="rate-btn like-btn" onclick="rate('{{ book.isbn }}', 8)" title="Подобається">👍</button>
-              <button class="rate-btn skip-btn" onclick="rate('{{ book.isbn }}', 5)" title="Нейтрально">😐</button>
-              <button class="rate-btn dislike-btn" onclick="rate('{{ book.isbn }}', 2)" title="Не подобається">👎</button>
+            <!-- Рейтинг 1–10 -->
+            <div class="taste-rating" id="rating-{{ book.isbn }}">
+              {% for i in "1234567890" %}{% with n=forloop.counter %}
+              <button class="tr-btn" data-isbn="{{ book.isbn }}" data-val="{{ n }}"
+                      onclick="rateBook('{{ book.isbn }}', {{ n }})">{{ n }}</button>
+              {% endwith %}{% endfor %}
             </div>
           </div>
           {% empty %}
@@ -69,7 +78,7 @@
 
     <!-- Права колонка: вже оцінені книги -->
     <div class="col-lg-4 mt-3 mt-lg-0" style="padding-left:1rem;">
-      <div style="background:#141414;border-radius:14px;padding:1.2rem;border:1px solid #1f2937;position:sticky;top:80px;">
+      <div style="background:#141414;border-radius:14px;padding:1.2rem;border:1px solid #1f2937;position:sticky;top:80px;max-height:80vh;overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
           <h5 style="color:#9ca3af;font-size:.82rem;text-transform:uppercase;letter-spacing:1px;margin:0;">Твій профіль</h5>
           {% if rated_books %}
@@ -83,18 +92,17 @@
           <div class="rated-item" id="rated-{{ item.book.isbn }}">
             {% if item.book.image_url_m %}<img src="{{ item.book.image_url_m }}" alt="">{% endif %}
             <div class="rated-meta">
-              <div class="rated-title">{{ item.book.title|truncatechars:30 }}</div>
-              <div class="rated-score">
-                {% if item.rating >= 7 %}👍{% elif item.rating >= 5 %}😐{% else %}👎{% endif %}
-                {{ item.rating }}/10
+              <div class="rated-title">{{ item.book.title|truncatechars:28 }}</div>
+              <div class="rated-score" id="score-{{ item.book.isbn }}">
+                <span class="score-badge score-{{ item.rating }}">{{ item.rating }}/10</span>
               </div>
             </div>
-            <button class="remove-btn" onclick="rate('{{ item.book.isbn }}', null)" title="Видалити">×</button>
+            <button class="remove-btn" onclick="rateBook('{{ item.book.isbn }}', null)" title="Видалити">×</button>
           </div>
           {% endfor %}
           {% else %}
           <p id="empty-profile" style="color:#4b5563;font-size:.82rem;text-align:center;padding:1rem 0;">
-            Ще нічого не оцінено.<br>Клікай 👍 / 😐 / 👎 на книгах зліва.
+            Ще нічого не оцінено.<br>Постав оцінку 1–10 на обкладинках зліва.
           </p>
           {% endif %}
         </div>
@@ -108,34 +116,50 @@
 {% block extra_js %}
 <style>
   .taste-card {
-    width: 150px;
-    background: var(--surface2);
-    border-radius: 12px;
-    overflow: hidden;
-    border: 2px solid transparent;
-    transition: border-color .2s, transform .2s;
-    flex-shrink: 0;
+    width:155px; background:var(--surface2); border-radius:12px;
+    overflow:hidden; border:2px solid transparent;
+    transition:border-color .2s; flex-shrink:0;
   }
-  .taste-card.rated-like  { border-color: #22c55e; }
-  .taste-card.rated-skip  { border-color: #f59e0b; }
-  .taste-card.rated-dislike { border-color: #ef4444; }
-  .taste-cover { width:100%; height:190px; overflow:hidden; }
+  .taste-cover { width:100%; height:185px; overflow:hidden; }
   .taste-cover img { width:100%; height:100%; object-fit:cover; display:block; }
-  .no-cover { width:100%; height:190px; background:#1f2937; display:flex; align-items:center; justify-content:center; color:#4b5563; font-size:2rem; }
-  .taste-info { padding:.5rem .6rem .2rem; }
-  .taste-title { font-size:.75rem; font-weight:700; color:var(--text); line-height:1.3; }
-  .taste-author { font-size:.68rem; color:#9ca3af; margin-top:2px; }
-  .taste-actions { display:flex; justify-content:space-around; padding:.4rem .3rem .6rem; }
-  .rate-btn { background:none; border:none; font-size:1.3rem; cursor:pointer; padding:0 .2rem; transition:transform .15s; line-height:1; }
-  .rate-btn:hover { transform:scale(1.3); }
+  .no-cover { width:100%;height:185px;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#4b5563;font-size:2rem; }
+  .taste-info { padding:.45rem .55rem .2rem; }
+  .taste-title { font-size:.73rem;font-weight:700;color:var(--text);line-height:1.3; }
+  .taste-author { font-size:.65rem;color:#9ca3af;margin-top:1px; }
 
-  .rated-item { display:flex; align-items:center; gap:.6rem; padding:.5rem 0; border-bottom:1px solid #1f2937; }
+  /* Рейтинг 1–10 */
+  .taste-rating { display:flex;flex-wrap:wrap;gap:2px;justify-content:center;padding:.35rem .4rem .5rem; }
+  .tr-btn {
+    width:22px;height:22px;border:1px solid #374151;border-radius:4px;
+    background:none;color:#6b7280;font-size:.65rem;font-weight:700;
+    cursor:pointer;padding:0;line-height:1;transition:background .1s,color .1s,transform .1s;
+  }
+  .tr-btn:hover { transform:scale(1.2);color:#fff; }
+  .tr-btn[data-val="1"],.tr-btn[data-val="2"],.tr-btn[data-val="3"] { border-color:#7f1d1d; }
+  .tr-btn[data-val="1"]:hover,.tr-btn[data-val="2"]:hover,.tr-btn[data-val="3"]:hover { background:#ef4444; }
+  .tr-btn[data-val="4"],.tr-btn[data-val="5"],.tr-btn[data-val="6"] { border-color:#78350f; }
+  .tr-btn[data-val="4"]:hover,.tr-btn[data-val="5"]:hover,.tr-btn[data-val="6"]:hover { background:#f59e0b;color:#000; }
+  .tr-btn[data-val="7"],.tr-btn[data-val="8"],.tr-btn[data-val="9"],.tr-btn[data-val="0"] { border-color:#14532d; }
+  .tr-btn[data-val="7"]:hover,.tr-btn[data-val="8"]:hover,.tr-btn[data-val="9"]:hover,.tr-btn[data-val="0"]:hover { background:#22c55e;color:#000; }
+  /* Активний стан */
+  .tr-btn.tr-active[data-val="1"],.tr-btn.tr-active[data-val="2"],.tr-btn.tr-active[data-val="3"] { background:#ef4444;border-color:#ef4444;color:#fff; }
+  .tr-btn.tr-active[data-val="4"],.tr-btn.tr-active[data-val="5"],.tr-btn.tr-active[data-val="6"] { background:#f59e0b;border-color:#f59e0b;color:#000; }
+  .tr-btn.tr-active[data-val="7"],.tr-btn.tr-active[data-val="8"],.tr-btn.tr-active[data-val="9"],.tr-btn.tr-active[data-val="0"] { background:#22c55e;border-color:#22c55e;color:#000; }
+
+  /* Колір рамки картки за оцінкою */
+  .taste-card.rated-low    { border-color:#ef4444; }
+  .taste-card.rated-mid    { border-color:#f59e0b; }
+  .taste-card.rated-high   { border-color:#22c55e; }
+
+  /* Права панель */
+  .rated-item { display:flex;align-items:center;gap:.55rem;padding:.45rem 0;border-bottom:1px solid #1f2937; }
   .rated-item:last-child { border-bottom:none; }
-  .rated-item img { width:36px; height:48px; object-fit:cover; border-radius:4px; flex-shrink:0; }
-  .rated-meta { flex:1; min-width:0; }
-  .rated-title { font-size:.75rem; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .rated-score { font-size:.7rem; color:#9ca3af; margin-top:1px; }
-  .remove-btn { background:none; border:none; color:#4b5563; font-size:1.1rem; cursor:pointer; flex-shrink:0; padding:0 .2rem; line-height:1; }
+  .rated-item img { width:34px;height:46px;object-fit:cover;border-radius:4px;flex-shrink:0; }
+  .rated-meta { flex:1;min-width:0; }
+  .rated-title { font-size:.73rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .rated-score { margin-top:2px; }
+  .score-badge { font-size:.68rem;font-weight:700;border-radius:4px;padding:1px 5px; }
+  .remove-btn { background:none;border:none;color:#4b5563;font-size:1rem;cursor:pointer;flex-shrink:0;padding:0;line-height:1; }
   .remove-btn:hover { color:#ef4444; }
 </style>
 
@@ -148,7 +172,21 @@ function getCsrf() {
   return c ? c.trim().split('=')[1] : '';
 }
 
-async function rate(isbn, rating) {
+function ratingColor(r) {
+  if (r === null) return '';
+  if (r <= 3) return '#ef4444';
+  if (r <= 6) return '#f59e0b';
+  return '#22c55e';
+}
+
+function cardClass(r) {
+  if (r === null) return '';
+  if (r <= 3) return 'rated-low';
+  if (r <= 6) return 'rated-mid';
+  return 'rated-high';
+}
+
+async function rateBook(isbn, rating) {
   const res = await fetch("{% url 'api_session_rate' %}", {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrf()},
@@ -158,63 +196,63 @@ async function rate(isbn, rating) {
   count = data.profile_count;
   updateProgress(count, data.ready);
 
+  // Оновлюємо кнопки рейтингу на картці
   const card = document.getElementById('card-' + isbn);
   if (card) {
-    if (rating === null) {
-      card.classList.remove('rated-like','rated-skip','rated-dislike');
-    } else if (rating >= 7) {
-      card.classList.add('rated-like');
-      card.classList.remove('rated-skip','rated-dislike');
-    } else if (rating >= 5) {
-      card.classList.add('rated-skip');
-      card.classList.remove('rated-like','rated-dislike');
-    } else {
-      card.classList.add('rated-dislike');
-      card.classList.remove('rated-like','rated-skip');
-    }
+    card.classList.remove('rated-low','rated-mid','rated-high');
+    if (rating !== null) card.classList.add(cardClass(rating));
+    card.querySelectorAll('.tr-btn').forEach(btn => {
+      btn.classList.remove('tr-active');
+      if (parseInt(btn.dataset.val) === rating || (btn.dataset.val === '0' && rating === 10)) {
+        if (rating !== null) btn.classList.add('tr-active');
+      }
+    });
   }
 
   if (rating === null) {
     const ri = document.getElementById('rated-' + isbn);
     if (ri) ri.remove();
-    if (count === 0) {
-      const ep = document.getElementById('empty-profile');
-      if (!ep) {
-        document.getElementById('rated-list').innerHTML =
-          '<p id="empty-profile" style="color:#4b5563;font-size:.82rem;text-align:center;padding:1rem 0;">Ще нічого не оцінено.<br>Клікай 👍 / 😐 / 👎 на книгах зліва.</p>';
-      }
-    }
+    if (count === 0) showEmptyProfile();
   } else {
     updateRatedList(isbn, rating);
+  }
+}
+
+function showEmptyProfile() {
+  const el = document.getElementById('empty-profile');
+  if (!el) {
+    document.getElementById('rated-list').innerHTML =
+      '<p id="empty-profile" style="color:#4b5563;font-size:.82rem;text-align:center;padding:1rem 0;">Ще нічого не оцінено.<br>Постав оцінку 1–10 на обкладинках зліва.</p>';
   }
 }
 
 function updateRatedList(isbn, rating) {
   const ep = document.getElementById('empty-profile');
   if (ep) ep.remove();
-  let ri = document.getElementById('rated-' + isbn);
+
+  const ri = document.getElementById('rated-' + isbn);
   if (ri) {
-    ri.querySelector('.rated-score').textContent = (rating >= 7 ? '👍' : rating >= 5 ? '😐' : '👎') + ' ' + rating + '/10';
+    const badge = ri.querySelector('.score-badge');
+    badge.textContent = rating + '/10';
+    badge.style.background = ratingColor(rating) + '33';
+    badge.style.color = ratingColor(rating);
     return;
   }
-  const cards = document.querySelectorAll('.taste-card');
-  let img = '', title = '', author = '';
-  cards.forEach(c => {
-    if (c.dataset.isbn === isbn) {
-      const i = c.querySelector('img');
-      img = i ? i.src : '';
-      title = c.querySelector('.taste-title')?.textContent || '';
-      author = c.querySelector('.taste-author')?.textContent || '';
-    }
-  });
-  const icon = rating >= 7 ? '👍' : rating >= 5 ? '😐' : '👎';
+
+  const card = document.getElementById('card-' + isbn);
+  const img = card?.querySelector('img')?.src || '';
+  const title = card?.querySelector('.taste-title')?.textContent || '';
+  const color = ratingColor(rating);
+
   const html = `<div class="rated-item" id="rated-${isbn}">
     ${img ? `<img src="${img}" alt="">` : ''}
     <div class="rated-meta">
       <div class="rated-title">${title}</div>
-      <div class="rated-score">${icon} ${rating}/10</div>
+      <div class="rated-score" id="score-${isbn}">
+        <span class="score-badge" style="background:${color}33;color:${color};">${rating}/10</span>
+      </div>
     </div>
-    <button class="remove-btn" onclick="rate('${isbn}', null)" title="Видалити">×</button>
+    <button class="remove-btn" onclick="rateBook('${isbn}', null)" title="Видалити">×</button>
   </div>`;
   document.getElementById('rated-list').insertAdjacentHTML('afterbegin', html);
 }
@@ -228,8 +266,7 @@ function updateProgress(n, ready) {
 
 async function clearProfile() {
   await fetch("{% url 'api_session_clear' %}", {
-    method: 'POST',
-    headers: {'X-CSRFToken': getCsrf()},
+    method: 'POST', headers: {'X-CSRFToken': getCsrf()},
   });
   window.location.reload();
 }

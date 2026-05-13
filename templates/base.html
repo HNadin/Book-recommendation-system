@@ -168,6 +168,7 @@
       <i class="fas fa-search" style="margin-right:.3rem;"></i>Пошук
     </a>
     <span style="color:#374151;margin:0 .25rem;">|</span>
+    <a class="nav-link d-inline {% if request.resolver_match.url_name == 'ratingsrecommend' or request.resolver_match.url_name == 'user_ratings' or request.resolver_match.url_name == 'user_recommendations' %}active{% endif %}" href="{% url 'ratingsrecommend' %}">За ID</a>
     <a class="nav-link d-inline {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">Дашборд</a>
     <a class="nav-link d-inline {% if request.resolver_match.url_name == 'evaluate' %}active{% endif %}" href="{% url 'evaluate' %}">Оцінка</a>
   </div>

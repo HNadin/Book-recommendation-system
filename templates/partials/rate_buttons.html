@@ -1,37 +1,39 @@
 {% comment %}
-Мінімальні кнопки оцінювання для карток.
-Параметри: isbn, user_rating (int або None), large (bool)
+Компактний рейтинг 1–10 для карток.
+Параметри: isbn, user_rating (int або None)
 {% endcomment %}
-<div style="display:flex;gap:4px;margin-top:5px;justify-content:center;">
-  <button class="rate-mini {% if user_rating >= 7 %}active{% endif %}"
-          data-isbn="{{ isbn }}" data-rating="8"
-          onclick="rate('{{ isbn }}', {% if user_rating == 8 %}null{% else %}8{% endif %})"
-          title="Подобається" style="{% if user_rating >= 7 %}background:rgba(34,197,94,.25);border-color:#22c55e;{% endif %}">
-    👍
-  </button>
-  <button class="rate-mini {% if user_rating and user_rating >= 4 and user_rating < 7 %}active{% endif %}"
-          data-isbn="{{ isbn }}" data-rating="5"
-          onclick="rate('{{ isbn }}', {% if user_rating == 5 %}null{% else %}5{% endif %})"
-          title="Нейтрально" style="{% if user_rating and user_rating >= 4 and user_rating < 7 %}background:rgba(245,158,11,.2);border-color:#f59e0b;{% endif %}">
-    😐
-  </button>
-  <button class="rate-mini {% if user_rating and user_rating < 4 %}active{% endif %}"
-          data-isbn="{{ isbn }}" data-rating="2"
-          onclick="rate('{{ isbn }}', {% if user_rating == 2 %}null{% else %}2{% endif %})"
-          title="Не подобається" style="{% if user_rating and user_rating < 4 %}background:rgba(239,68,68,.2);border-color:#ef4444;{% endif %}">
-    👎
-  </button>
+<div class="rating-strip" data-isbn="{{ isbn }}">
+  {% for i in "1234567890" %}
+  {% with num=forloop.counter %}
+  <button class="rs-btn{% if user_rating == num %} rs-active{% endif %}"
+          data-isbn="{{ isbn }}"
+          data-val="{{ num }}"
+          onclick="rateBook('{{ isbn }}', {{ num }})"
+          title="{{ num }}/10">{{ num }}</button>
+  {% endwith %}
+  {% endfor %}
+  {% if user_rating %}
+  <button class="rs-clear" onclick="rateBook('{{ isbn }}', null)" title="Зняти оцінку">×</button>
+  {% endif %}
 </div>
 <style>
-  .rate-mini {
-    background: none;
-    border: 1px solid #374151;
-    border-radius: 6px;
-    font-size: .9rem;
-    padding: 1px 5px;
-    cursor: pointer;
-    transition: background .15s, border-color .15s, transform .1s;
-    line-height: 1.4;
-  }
-  .rate-mini:hover { transform: scale(1.2); }
+.rating-strip { display:flex; gap:2px; flex-wrap:wrap; justify-content:center; margin-top:5px; }
+.rs-btn {
+  width:20px; height:20px; border:1px solid #374151; border-radius:4px;
+  background:none; color:#6b7280; font-size:.65rem; font-weight:700;
+  cursor:pointer; padding:0; line-height:1; transition:background .1s, color .1s, transform .1s;
+}
+.rs-btn:hover { transform:scale(1.2); color:var(--text); }
+.rs-btn[data-val="1"],.rs-btn[data-val="2"],.rs-btn[data-val="3"] { border-color:#7f1d1d; }
+.rs-btn[data-val="1"]:hover,.rs-btn[data-val="2"]:hover,.rs-btn[data-val="3"]:hover { background:#7f1d1d; color:#fff; }
+.rs-btn[data-val="4"],.rs-btn[data-val="5"],.rs-btn[data-val="6"] { border-color:#78350f; }
+.rs-btn[data-val="4"]:hover,.rs-btn[data-val="5"]:hover,.rs-btn[data-val="6"]:hover { background:#78350f; color:#fff; }
+.rs-btn[data-val="7"],.rs-btn[data-val="8"],.rs-btn[data-val="9"],.rs-btn[data-val="0"] { border-color:#14532d; }
+.rs-btn[data-val="7"]:hover,.rs-btn[data-val="8"]:hover,.rs-btn[data-val="9"]:hover,.rs-btn[data-val="0"]:hover { background:#14532d; color:#fff; }
+/* Активний стан */
+.rs-btn.rs-active[data-val="1"],.rs-btn.rs-active[data-val="2"],.rs-btn.rs-active[data-val="3"] { background:#ef4444; border-color:#ef4444; color:#fff; }
+.rs-btn.rs-active[data-val="4"],.rs-btn.rs-active[data-val="5"],.rs-btn.rs-active[data-val="6"] { background:#f59e0b; border-color:#f59e0b; color:#000; }
+.rs-btn.rs-active[data-val="7"],.rs-btn.rs-active[data-val="8"],.rs-btn.rs-active[data-val="9"],.rs-btn.rs-active[data-val="0"] { background:#22c55e; border-color:#22c55e; color:#000; }
+.rs-clear { width:20px; height:20px; border:1px solid #374151; border-radius:4px; background:none; color:#4b5563; font-size:.75rem; cursor:pointer; padding:0; line-height:1; }
+.rs-clear:hover { background:#374151; color:#fff; }
 </style>

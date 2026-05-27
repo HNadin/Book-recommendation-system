@@ -195,14 +195,22 @@ def evaluate_view(request):
     Model comparison dashboard — Section 3.5 of thesis.
     Loads pre-computed metrics from eval_results.json.
     """
+    import json as _json
     results = load_eval_results()
     models_list = []
+    chart_precisions = []
+    chart_ndcgs = []
     for name, metrics in results.items():
         models_list.append({"name": name, "metrics": metrics})
+        chart_precisions.append(next((v for k, v in metrics.items() if "precision" in k), 0) or 0)
+        chart_ndcgs.append(next((v for k, v in metrics.items() if "ndcg" in k), 0) or 0)
 
     return render(request, "evaluate.html", {
         "models": models_list,
         "has_results": bool(results),
+        "chart_labels_json": _json.dumps([m["name"] for m in models_list]),
+        "chart_precisions_json": _json.dumps(chart_precisions),
+        "chart_ndcgs_json": _json.dumps(chart_ndcgs),
     })
 
 

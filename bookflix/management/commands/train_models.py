@@ -47,8 +47,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--epochs", type=int, default=10,
-            help="NCF training epochs (default: 10)"
+            "--epochs", type=int, default=30,
+            help="NCF training epochs (default: 30)"
         )
         parser.add_argument(
             "--embedding-dim", type=int, default=32,
@@ -338,7 +338,10 @@ class Command(BaseCommand):
 
             def ncf_recommend_fn(uid):
                 ctx = user_context.get(uid, set())
-                candidates = [i for i in all_isbns if i not in ctx]
+                known = set(ncf_meta.get("isbn_to_idx", {}).keys())
+                candidates = [i for i in all_isbns if i not in ctx and i in known]
+                if not candidates:
+                    candidates = [i for i in all_isbns if i not in ctx]
                 return ms.ncf_recommend(uid, candidates[:500], top_n=k)
 
             rmse = _rmse_for(_ncf_predict)

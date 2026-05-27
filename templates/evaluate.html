@@ -98,9 +98,9 @@
 {% if has_results %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-const modelNames = [{% for m in models %}"{{ m.name }}"{% if not forloop.last %},{% endif %}{% endfor %}];
-const precisions = [{% for m in models %}{% for k,v in m.metrics.items %}{% if "precision" in k %}{{ v|default:0 }}{% if not forloop.last %},{% endif %}{% endif %}{% endfor %}{% if not forloop.last %},{% endif %}{% endfor %}];
-const ndcgs = [{% for m in models %}{% for k,v in m.metrics.items %}{% if "ndcg" in k %}{{ v|default:0 }}{% if not forloop.last %},{% endif %}{% endif %}{% endfor %}{% if not forloop.last %},{% endif %}{% endfor %}];
+const modelNames = {{ chart_labels_json }};
+const precisions = {{ chart_precisions_json }};
+const ndcgs = {{ chart_ndcgs_json }};
 
 const COLORS = ['#6366f1','#f59e0b','#b81024','#22c55e','#06b6d4'];
 

@@ -294,16 +294,22 @@ def get_book_semantic_neighbours(isbn: str, books_df: pd.DataFrame, top_n: int =
 
 def train_test_split(ratings_df: pd.DataFrame, test_ratio: float = 0.2):
     """
-    Stratified user split: 80 % of users → train, 20 % → test.
-    Returns (train_df, test_df).
+    Per-rating split (Section 3.5): for each user, 20 % of their ratings
+    go to the test set, 80 % stay in training.
+
+    This ensures all users appear in training so every model can make
+    predictions for every user — prerequisite for non-zero Precision@K
+    and NDCG@K when models are evaluated against held-out liked items.
     """
-    users = ratings_df["user_id"].unique().tolist()
-    random.shuffle(users)
-    split = int(len(users) * (1 - test_ratio))
-    train_users = set(users[:split])
-    train_df = ratings_df[ratings_df["user_id"].isin(train_users)]
-    test_df = ratings_df[~ratings_df["user_id"].isin(train_users)]
-    return train_df, test_df
+    rng = random.Random(SEED)
+    train_idx, test_idx = [], []
+    for _, group in ratings_df.groupby("user_id"):
+        idxs = group.index.tolist()
+        rng.shuffle(idxs)
+        split = max(1, int(len(idxs) * (1 - test_ratio)))
+        train_idx.extend(idxs[:split])
+        test_idx.extend(idxs[split:])
+    return ratings_df.loc[train_idx].copy(), ratings_df.loc[test_idx].copy()
 
 
 # ---------------------------------------------------------------------------

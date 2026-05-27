@@ -162,6 +162,115 @@ def get_session_recommendations(
     ]
 
 
+def _normalize_array(arr: np.ndarray) -> np.ndarray:
+    lo, hi = arr.min(), arr.max()
+    return (arr - lo) / (hi - lo) if hi > lo else np.zeros_like(arr)
+
+
+def get_session_recommendations_full_hybrid(
+    session_ratings: dict,
+    books_df: pd.DataFrame,
+    top_n: int = 10,
+) -> list:
+    """
+    Повний NCF + LSA гібрид для сесійного користувача через
+    інференс ембедінгу (Section 2.3 + 2.4).
+
+    Замість user_id використовується псевдо-ембедінг:
+        user_emb_inferred = Σ (item_emb(isbn) × rating) / Σ rating
+
+    Потім він подається напряму в MLP — точно так само як для відомих
+    юзерів, але без необхідності перенавчання моделі.
+
+    Якщо NCF не навчений → автоматично повертається до cold-start гібриду.
+
+    Метод     |  Компоненти                          | Ваги
+    ----------|--------------------------------------|----------
+    Є NCF     |  NCF(inferred) + LSA semantic        | 0.6 + 0.4
+    Немає NCF |  LSA semantic  + avg_rating          | 0.65 + 0.35
+    """
+    ncf_result = load_ncf()
+    embedder = load_embedder()
+    rated_set = set(session_ratings.keys())
+
+    # --- Запасний варіант: cold-start без NCF ---
+    if ncf_result is None:
+        return get_session_recommendations(session_ratings, books_df, top_n)
+
+    model, meta = ncf_result
+    isbn_to_idx: dict = meta["isbn_to_idx"]
+
+    # --- Будуємо item_ratings для інференсу ембедінгу ---
+    item_ratings = [
+        (isbn_to_idx[isbn], float(rating))
+        for isbn, rating in session_ratings.items()
+        if isbn in isbn_to_idx
+    ]
+    if not item_ratings:
+        # Жодна оцінена книга не є в навчальній вибірці → cold-start
+        return get_session_recommendations(session_ratings, books_df, top_n)
+
+    # --- Виводимо псевдо-ембедінг користувача ---
+    user_emb = model.infer_user_embedding(item_ratings)   # (1, emb_dim)
+
+    # --- Кандидати ---
+    candidates_df = books_df[~books_df["isbn"].isin(rated_set)].copy()
+    if candidates_df.empty:
+        return []
+
+    candidate_isbns = [
+        isbn for isbn in candidates_df["isbn"].tolist()
+        if isbn in isbn_to_idx
+    ]
+    if not candidate_isbns:
+        return get_session_recommendations(session_ratings, books_df, top_n)
+
+    # --- NCF-компонент ---
+    import torch
+    idxs = torch.tensor([isbn_to_idx[isbn] for isbn in candidate_isbns], dtype=torch.long)
+    with torch.no_grad():
+        ncf_scores = model.forward_with_inferred_embedding(user_emb, idxs).numpy()
+
+    # --- LSA-компонент ---
+    if embedder is not None:
+        liked = [isbn for isbn, r in session_ratings.items() if r >= 7]
+        disliked = [isbn for isbn, r in session_ratings.items() if r <= 3]
+        if not liked:
+            liked = list(session_ratings.keys())
+        user_profile = embedder.build_user_profile(liked)
+        if user_profile is not None:
+            if disliked:
+                d_vec = embedder.build_user_profile(disliked)
+                if d_vec is not None:
+                    user_profile = user_profile - 0.3 * d_vec
+                    n = np.linalg.norm(user_profile)
+                    if n > 0:
+                        user_profile /= n
+            book_vecs = np.stack([embedder.get(isbn) for isbn in candidate_isbns])
+            sem_scores = book_vecs @ user_profile
+        else:
+            sem_scores = np.zeros(len(candidate_isbns))
+    else:
+        sem_scores = np.zeros(len(candidate_isbns))
+
+    # --- Feature Combination (ті ж ваги що й для відомих юзерів) ---
+    ncf_norm = _normalize_array(ncf_scores)
+    sem_norm = _normalize_array(sem_scores)
+    combined = 0.6 * ncf_norm + 0.4 * sem_norm
+
+    top_idx = np.argsort(combined)[::-1][:top_n]
+    return [
+        {
+            "isbn": candidate_isbns[i],
+            "score": round(float(combined[i]), 3),
+            "ncf_score": round(float(ncf_scores[i]), 3),
+            "sem_score": round(float(sem_scores[i]), 3),
+            "method": "NCF (inferred) + LSA hybrid",
+        }
+        for i in top_idx
+    ]
+
+
 def get_book_semantic_neighbours(isbn: str, books_df: pd.DataFrame, top_n: int = 10) -> list:
     """Повертає семантично схожі книги для конкретного ISBN."""
     embedder = load_embedder()

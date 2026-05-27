@@ -140,7 +140,7 @@ class Command(BaseCommand):
         self.stdout.write("=== Step 6: Evaluating all models ===")
         k = options["eval_k"]
         results = self._evaluate_all(
-            test_df, books_df, embedder, svd_model, ncf_model, meta, k
+            train_df, test_df, books_df, embedder, svd_model, ncf_model, meta, k
         )
         save_eval_results(results)
         self.stdout.write("\n=== Evaluation Results ===")
@@ -233,15 +233,35 @@ class Command(BaseCommand):
         }
         return model, meta
 
-    def _evaluate_all(self, test_df, books_df, embedder, svd, ncf_model, ncf_meta, k):
+    def _evaluate_all(self, train_df, test_df, books_df, embedder, svd, ncf_model, ncf_meta, k):
         results = {}
+        all_isbns = books_df["isbn"].tolist()
 
-        # Relevance sets
-        user_relevant = {}
+        # ------------------------------------------------------------------
+        # Per-rating split evaluation (Section 3.5):
+        #   train_df  — items already seen by the model (context)
+        #   test_df   — held-out items; liked ones (>= threshold) = ground truth
+        #
+        # Since train_test_split is now per-rating (not per-user), every user
+        # appears in train_df, so all models can predict for all users.
+        # Candidates = all_isbns - user's training items.
+        # ------------------------------------------------------------------
+        user_context: dict[int, set] = {}
+        user_context_liked: dict[int, list] = {}
+
+        for uid, grp in train_df.groupby("user_id"):
+            uid = int(uid)
+            user_context[uid] = set(grp["book__isbn"].tolist())
+            user_context_liked[uid] = grp[
+                grp["book_rating"] >= RELEVANCE_THRESHOLD
+            ]["book__isbn"].tolist()
+
+        user_relevant: dict[int, set] = {}
         for uid, grp in test_df.groupby("user_id"):
-            liked = set(grp.loc[grp["book_rating"] >= RELEVANCE_THRESHOLD, "book__isbn"])
+            uid = int(uid)
+            liked = set(grp[grp["book_rating"] >= RELEVANCE_THRESHOLD]["book__isbn"])
             if liked:
-                user_relevant[int(uid)] = liked
+                user_relevant[uid] = liked
 
         sample_users = list(user_relevant.keys())[:200]
 
@@ -268,18 +288,14 @@ class Command(BaseCommand):
             ndcg = compute_ndcg_at_k(user_recs, user_relevant, k)
             return prec, ndcg
 
-        all_isbns = books_df["isbn"].tolist()
-
         # --- SVD baseline ---
         if svd:
             def svd_predict(uid, isbn):
                 return svd.predict(uid, isbn).est
 
             def svd_recommend(uid):
-                test_user_rated = set(
-                    test_df[test_df["user_id"] == uid]["book__isbn"].tolist()
-                )
-                candidates = [i for i in all_isbns if i not in test_user_rated]
+                ctx = user_context.get(uid, set())
+                candidates = [i for i in all_isbns if i not in ctx]
                 preds = [(i, svd.predict(uid, i).est) for i in candidates[:500]]
                 preds.sort(key=lambda x: x[1], reverse=True)
                 return [i for i, _ in preds[:k]]
@@ -295,15 +311,10 @@ class Command(BaseCommand):
         # --- Content-only (LSA cosine) ---
         if embedder:
             def content_recommend(uid):
-                test_user_rated = set(
-                    test_df[test_df["user_id"] == uid]["book__isbn"].tolist()
-                )
-                liked = [i for i in test_user_rated
-                         if test_df[(test_df["user_id"] == uid) &
-                                    (test_df["book__isbn"] == i)]["book_rating"].values[0]
-                         >= RELEVANCE_THRESHOLD]
-                profile = embedder.build_user_profile(liked)
-                candidates = [i for i in all_isbns if i not in test_user_rated]
+                ctx = user_context.get(uid, set())
+                liked_ctx = user_context_liked.get(uid, [])
+                profile = embedder.build_user_profile(liked_ctx)
+                candidates = [i for i in all_isbns if i not in ctx]
                 if profile is None or not candidates:
                     return []
                 vecs = np.stack([embedder.get(i) for i in candidates[:500]])
@@ -322,15 +333,12 @@ class Command(BaseCommand):
         if ncf_model is not None:
             import torch
             from bookflix.ml.model_store import ncf_predict as _ncf_predict
-            # Temporarily inject meta into module-level cache for evaluation
             import bookflix.ml.model_store as ms
             ms._cache["ncf"] = (ncf_model, ncf_meta)
 
             def ncf_recommend_fn(uid):
-                test_user_rated = set(
-                    test_df[test_df["user_id"] == uid]["book__isbn"].tolist()
-                )
-                candidates = [i for i in all_isbns if i not in test_user_rated]
+                ctx = user_context.get(uid, set())
+                candidates = [i for i in all_isbns if i not in ctx]
                 return ms.ncf_recommend(uid, candidates[:500], top_n=k)
 
             rmse = _rmse_for(_ncf_predict)
@@ -346,19 +354,14 @@ class Command(BaseCommand):
                 from bookflix.ml.hybrid import feature_combination_recommend
 
                 def hybrid_recommend_fn(uid):
-                    test_user_rated = set(
-                        test_df[test_df["user_id"] == uid]["book__isbn"].tolist()
-                    )
-                    liked = [i for i in test_user_rated
-                             if test_df[(test_df["user_id"] == uid) &
-                                        (test_df["book__isbn"] == i)]["book_rating"].values[0]
-                             >= RELEVANCE_THRESHOLD]
-                    candidates = [i for i in all_isbns if i not in test_user_rated]
+                    ctx = user_context.get(uid, set())
+                    liked_ctx = user_context_liked.get(uid, [])
+                    candidates = [i for i in all_isbns if i not in ctx]
                     ranked = feature_combination_recommend(
                         user_id=uid,
                         candidate_isbns=candidates[:500],
                         embedder=embedder,
-                        rated_isbns=liked,
+                        rated_isbns=liked_ctx,
                         ncf_score_fn=_ncf_predict,
                         top_n=k,
                     )
@@ -371,30 +374,22 @@ class Command(BaseCommand):
                     f"ndcg_at_{k}": round(ndcg, 4),
                 }
 
-                # --- Hybrid + Sentiment ---
-                if sentiment_map := (lambda: None)():
-                    pass  # placeholder — sentiment map loaded from pkl during eval
+                # --- Hybrid + Sentiment Correction ---
                 with open(_path("sentiment_map.pkl"), "rb") as f:
                     s_map = pickle.load(f)
 
                 if s_map:
                     from bookflix.ml.sentiment import apply_sentiment_correction
-                    test_adj = apply_sentiment_correction(test_df, s_map)
 
                     def hybrid_sentiment_recommend_fn(uid):
-                        test_user_rated = set(
-                            test_adj[test_adj["user_id"] == uid]["book__isbn"].tolist()
-                        )
-                        liked = [i for i in test_user_rated
-                                 if test_adj[(test_adj["user_id"] == uid) &
-                                             (test_adj["book__isbn"] == i)]["adjusted_rating"].values[0]
-                                 >= RELEVANCE_THRESHOLD]
-                        candidates = [i for i in all_isbns if i not in test_user_rated]
+                        ctx = user_context.get(uid, set())
+                        liked_ctx = user_context_liked.get(uid, [])
+                        candidates = [i for i in all_isbns if i not in ctx]
                         ranked = feature_combination_recommend(
                             user_id=uid,
                             candidate_isbns=candidates[:500],
                             embedder=embedder,
-                            rated_isbns=liked,
+                            rated_isbns=liked_ctx,
                             ncf_score_fn=_ncf_predict,
                             top_n=k,
                         )

@@ -38,6 +38,7 @@ from .recommendation_algorithms import (
     evaluate_user_model,
     get_book_semantic_neighbours,
     get_session_recommendations,
+    get_session_recommendations_full_hybrid,
     get_user_all_rated_isbns,
     get_user_rated_isbns,
     hybrid_recommendations,
@@ -526,7 +527,8 @@ def my_recommendations_view(request):
 
     try:
         books_df = load_books_df()
-        ranked = get_session_recommendations(profile, books_df, top_n=10)
+        # Спробуємо повний NCF + LSA гібрид з інференсом ембедінгу
+        ranked = get_session_recommendations_full_hybrid(profile, books_df, top_n=10)
         isbn_list = [r["isbn"] for r in ranked]
         score_map = {r["isbn"]: r for r in ranked}
 
@@ -536,10 +538,12 @@ def my_recommendations_view(request):
             item["user_rating"] = profile.get(item["isbn"])
 
         liked_count = sum(1 for r in profile.values() if r >= 7)
+        method = ranked[0].get("method", "unknown") if ranked else "unknown"
     except Exception as e:
         logger.exception("Error generating session recommendations: %s", e)
         enriched = []
         liked_count = 0
+        method = "error"
 
     return render(request, "my_recommendations.html", {
         "recommendations": enriched,
@@ -547,4 +551,6 @@ def my_recommendations_view(request):
         "min_ratings": MIN_RATINGS_FOR_RECS,
         "liked_count": liked_count,
         "needs_more": False,
+        "method": method,
+        "ncf_available": "NCF" in method,
     })

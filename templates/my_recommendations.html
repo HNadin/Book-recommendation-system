@@ -34,16 +34,25 @@
     </a>
   </div>
 
-  <div class="alert-info-dark" style="max-width:750px;margin:0 auto 1.5rem;text-align:center;font-size:.83rem;line-height:1.7;">
-    <i class="fas fa-info-circle" style="margin-right:.4rem;"></i>
-    <strong>Гібридна модель для нового користувача (cold-start, розділ 2.4)</strong><br>
-    Оскільки ти не в навчальній вибірці NCF, застосовується гібрид двох сигналів:<br>
-    <span style="color:#6366f1;">■</span> <strong>65 % — LSA-семантика:</strong>
-    профіль з вподобаних книг → вектор схожості з усіма книгами бібліотеки<br>
-    <span style="color:#22c55e;">■</span> <strong>35 % — Середній рейтинг спільноти:</strong>
-    колаборативний сигнал без явного NCF-ID<br>
-    Нелюбляні книги (1–3) зменшують вагу схожих напрямів.
+  {% if ncf_available %}
+  <div class="alert-info-dark" style="max-width:780px;margin:0 auto 1.5rem;text-align:center;font-size:.83rem;line-height:1.8;">
+    <i class="fas fa-brain" style="margin-right:.4rem;color:#6366f1;"></i>
+    <strong>Повний NCF + LSA гібрид з інференсом ембедінгу (розділи 2.3 + 2.4)</strong><br>
+    Псевдо-ембедінг користувача виведено як зважене середнє ембедінгів оцінених книг:<br>
+    <code style="font-size:.78rem;color:#9ca3af;">user_emb = Σ(item_emb(isbn) × rating) / Σ rating</code><br>
+    <span style="color:#6366f1;">■</span> <strong>60 % NCF(inferred_user, book)</strong> — нелінійна взаємодія через MLP<br>
+    <span style="color:#06b6d4;">■</span> <strong>40 % LSA cosine similarity</strong> — семантичний контентний сигнал
   </div>
+  {% else %}
+  <div class="alert-info-dark" style="max-width:780px;margin:0 auto 1.5rem;text-align:center;font-size:.83rem;line-height:1.8;">
+    <i class="fas fa-info-circle" style="margin-right:.4rem;"></i>
+    <strong>Cold-start гібрид: LSA + рейтинг спільноти (розділ 2.4)</strong><br>
+    NCF ще не навчений — застосовується резервний гібрид:<br>
+    <span style="color:#06b6d4;">■</span> <strong>65 % LSA-семантика</strong> — профіль з вподобаних книг<br>
+    <span style="color:#22c55e;">■</span> <strong>35 % Середній рейтинг спільноти</strong><br>
+    Запусти <code>python manage.py train_models</code> щоб активувати повний NCF гібрид.
+  </div>
+  {% endif %}
 
   {% if recommendations %}
   <div class="cards-grid">
@@ -65,10 +74,11 @@
 
         <!-- Оцінка моделі -->
         {% if rec.score %}
-        <div style="margin-top:4px;font-size:.68rem;line-height:1.6;">
-          <span style="color:#6366f1;" title="Загальний hybrid score">⬡ {{ rec.score }}</span><br>
-          {% if rec.sem_score %}<span style="color:#06b6d4;" title="Семантична схожість">LSA {{ rec.sem_score }}</span>  {% endif %}
-          {% if rec.pop_score %}<span style="color:#22c55e;" title="Рейтинг спільноти">★ {{ rec.pop_score }}</span>{% endif %}
+        <div style="margin-top:4px;font-size:.68rem;line-height:1.7;">
+          <span style="color:#6366f1;" title="Hybrid score">⬡ {{ rec.score }}</span><br>
+          {% if rec.ncf_score %}<span style="color:#818cf8;" title="NCF (inferred embedding)">NCF {{ rec.ncf_score }}</span>  {% endif %}
+          {% if rec.sem_score %}<span style="color:#06b6d4;" title="LSA semantic">LSA {{ rec.sem_score }}</span>{% endif %}
+          {% if rec.pop_score and not rec.ncf_score %}<br><span style="color:#22c55e;" title="Avg rating">★ {{ rec.pop_score }}</span>{% endif %}
         </div>
         {% endif %}
 

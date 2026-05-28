@@ -9,8 +9,8 @@
   </div>
 
   <!-- User ID form -->
-  <div style="background:#141414; border-radius:14px; padding:1.8rem; border:1px solid #1f2937; margin-bottom:1.5rem; text-align:center;">
-    <p style="color:#9ca3af; font-size:0.88rem; margin-bottom:1rem;">Enter a Book-Crossing user ID to view their reading history or get personalised recommendations.</p>
+  <div style="background:#ffffff; border-radius:14px; padding:1.8rem; border:1px solid #e5e7eb; margin-bottom:1.5rem; text-align:center;">
+    <p style="color:#374151; font-size:0.88rem; margin-bottom:1rem;">Enter a Book-Crossing user ID to view their reading history or get personalised recommendations.</p>
     <div class="d-flex justify-content-center align-items-center flex-wrap" style="gap:0.75rem;">
       <input type="text" id="user_id_input" class="bookflix-input" placeholder="User ID e.g. 239106" style="width:200px;">
       <button class="btn-crimson" onclick="goRatings()">View Ratings</button>
@@ -20,7 +20,7 @@
 
   <!-- Sample user IDs -->
   <div style="text-align:center; margin-bottom:2rem;">
-    <p style="color:#6b7280; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.6rem;">Users with 5+ ratings:</p>
+    <p style="color:#374151; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.6rem;">Users with 5+ ratings:</p>
     {% for id in random_user_ids %}
     <a class="uid-btn" href="{% url 'user_ratings' id %}">{{ id }}</a>
     {% endfor %}

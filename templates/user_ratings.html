@@ -10,12 +10,12 @@
 
   <!-- Nav -->
   <div style="text-align:center; margin-bottom:1.5rem;">
-    <a class="uid-btn" href="{% url 'ratingsrecommend' %}" style="background:#374151;">&larr; Back</a>
+    <a class="uid-btn" href="{% url 'ratingsrecommend' %}" style="background:#e5e7eb;">&larr; Back</a>
     <a class="uid-btn" href="{% url 'user_recommendations' user_id %}" style="background:#b81024;">Get Recommendations &rarr;</a>
     <a class="uid-btn" href="{% url 'user_recommendations' user_id %}?sentiment=1" style="background:#7c3aed;">+ Sentiment Correction &rarr;</a>
   </div>
 
-  <p style="color:#6b7280; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem; text-align:center;">Other users:</p>
+  <p style="color:#374151; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem; text-align:center;">Other users:</p>
   <div style="text-align:center; margin-bottom:1.5rem;">
     {% for id in random_user_ids %}
     <a class="uid-btn" href="{% url 'user_ratings' id %}">{{ id }}</a>
@@ -29,7 +29,7 @@
       {% if rating.book.image_url_m %}
       <img src="{{ rating.book.image_url_m }}" alt="{{ rating.book.title }}">
       {% else %}
-      <div style="width:100%;height:200px;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.75rem;">No cover</div>
+      <div style="width:100%;height:200px;background:#f0f2f5;display:flex;align-items:center;justify-content:center;color:#374151;font-size:0.75rem;">No cover</div>
       {% endif %}
       <div class="card-info">
         <div class="card-title">{{ rating.book.title|truncatechars:45 }}</div>

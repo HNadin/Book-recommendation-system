@@ -8,7 +8,7 @@
     <h1><i class="fas fa-flask" style="margin-right:0.5rem;"></i>Experimental Results &amp; Model Comparison</h1>
   </div>
 
-  <p style="text-align:center; color:#9ca3af; font-size:0.88rem; margin-bottom:2rem;">
+  <p style="text-align:center; color:#374151; font-size:0.88rem; margin-bottom:2rem;">
     Section 3.5 — Comparison of RMSE, Precision@K and NDCG@K across all model variants.<br>
     Evaluated on a held-out 20% test split of the Book-Crossing dataset.
   </p>
@@ -16,8 +16,8 @@
   {% if has_results %}
 
   <!-- Main comparison table -->
-  <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937; margin-bottom:2rem;">
-    <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1.2rem;">
+  <div style="background:#ffffff; border-radius:14px; padding:1.5rem; border:1px solid #e5e7eb; margin-bottom:2rem;">
+    <h5 style="color:#374151; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1.2rem;">
       Offline Evaluation — All Model Variants
     </h5>
     <div class="table-responsive">
@@ -35,7 +35,7 @@
           <tr>
             <td>{{ m.name }}</td>
             {% with metrics=m.metrics %}
-            <td>{% if metrics.rmse is not None %}{{ metrics.rmse }}{% else %}<span style="color:#4b5563;">—</span>{% endif %}</td>
+            <td>{% if metrics.rmse is not None %}{{ metrics.rmse }}{% else %}<span style="color:#9ca3af;">—</span>{% endif %}</td>
             <td>
               {% for key, val in metrics.items %}
                 {% if "precision" in key %}{{ val }}{% endif %}
@@ -57,23 +57,23 @@
   <!-- Chart -->
   <div class="row mb-4">
     <div class="col-md-6 mb-3">
-      <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937;">
-        <h5 style="color:#9ca3af; font-size:0.82rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Precision@10 by Model</h5>
+      <div style="background:#ffffff; border-radius:14px; padding:1.5rem; border:1px solid #e5e7eb;">
+        <h5 style="color:#374151; font-size:0.82rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Precision@10 by Model</h5>
         <canvas id="precisionChart" style="max-height:280px;"></canvas>
       </div>
     </div>
     <div class="col-md-6 mb-3">
-      <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937;">
-        <h5 style="color:#9ca3af; font-size:0.82rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">NDCG@10 by Model</h5>
+      <div style="background:#ffffff; border-radius:14px; padding:1.5rem; border:1px solid #e5e7eb;">
+        <h5 style="color:#374151; font-size:0.82rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">NDCG@10 by Model</h5>
         <canvas id="ndcgChart" style="max-height:280px;"></canvas>
       </div>
     </div>
   </div>
 
   <!-- Methodology note -->
-  <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937; margin-bottom:2rem;">
-    <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.8rem;">Methodology</h5>
-    <ul style="color:#9ca3af; font-size:0.85rem; line-height:1.9; padding-left:1.2rem;">
+  <div style="background:#ffffff; border-radius:14px; padding:1.5rem; border:1px solid #e5e7eb; margin-bottom:2rem;">
+    <h5 style="color:#374151; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.8rem;">Methodology</h5>
+    <ul style="color:#374151; font-size:0.85rem; line-height:1.9; padding-left:1.2rem;">
       <li><strong style="color:var(--text);">Train/Test split:</strong> Per-rating 80/20 split — for each user, 80 % of ratings go to training, 20 % to the held-out test set. Seed = 42.</li>
       <li><strong style="color:var(--text);">Relevance threshold:</strong> Rating ≥ 7 is considered a "liked" book.</li>
       <li><strong style="color:var(--text);">RMSE:</strong> Root Mean Squared Error on rating predictions for the test set.</li>
@@ -131,12 +131,12 @@ function barChart(id, data, label) {
       },
       scales: {
         x: {
-          ticks: { color: '#9ca3af', callback: v => v.toFixed(4) },
-          grid: { color: '#1f2937' },
+          ticks: { color: '#374151', callback: v => v.toFixed(4) },
+          grid: { color: '#e5e7eb' },
           max: axisMax,
           min: 0,
         },
-        y: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { display: false } }
+        y: { ticks: { color: '#374151', font: { size: 11 } }, grid: { display: false } }
       }
     }
   });

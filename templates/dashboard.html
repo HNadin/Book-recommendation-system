@@ -34,8 +34,8 @@
   <!-- Rating distribution chart -->
   <div class="row mb-4">
     <div class="col-12">
-      <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937;">
-        <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Rating Distribution (Book-Crossing Dataset)</h5>
+      <div style="background:#ffffff; border-radius:14px; padding:1.5rem; border:1px solid #e5e7eb;">
+        <h5 style="color:#374151; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Rating Distribution (Book-Crossing Dataset)</h5>
         <canvas id="ratingChart" style="max-height:280px;"></canvas>
       </div>
     </div>
@@ -44,12 +44,12 @@
   <!-- Top books -->
   <div class="row mb-4">
     <div class="col-md-6 mb-3">
-      <div style="background:#141414; border-radius:14px; padding:1.2rem; border:1px solid #1f2937;">
-        <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Most Rated Books</h5>
+      <div style="background:#ffffff; border-radius:14px; padding:1.2rem; border:1px solid #e5e7eb;">
+        <h5 style="color:#374151; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Most Rated Books</h5>
         <div class="cards-grid">
           {% for book in popular_books %}
           <div class="book-card">
-            {% if book.image_url_m %}<img src="{{ book.image_url_m }}" alt="{{ book.title }}">{% else %}<div style="width:100%;height:200px;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.75rem;">No cover</div>{% endif %}
+            {% if book.image_url_m %}<img src="{{ book.image_url_m }}" alt="{{ book.title }}">{% else %}<div style="width:100%;height:200px;background:#f0f2f5;display:flex;align-items:center;justify-content:center;color:#374151;font-size:0.75rem;">No cover</div>{% endif %}
             <div class="card-info">
               <div class="card-title">{{ book.title|truncatechars:40 }}</div>
               <div class="card-author">{{ book.author }}</div>
@@ -57,19 +57,19 @@
             </div>
           </div>
           {% empty %}
-          <p style="color:#6b7280;font-size:0.85rem;">No data — import the dataset first.</p>
+          <p style="color:#374151;font-size:0.85rem;">No data — import the dataset first.</p>
           {% endfor %}
         </div>
       </div>
     </div>
 
     <div class="col-md-6 mb-3">
-      <div style="background:#141414; border-radius:14px; padding:1.2rem; border:1px solid #1f2937;">
-        <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Highest Rated Books</h5>
+      <div style="background:#ffffff; border-radius:14px; padding:1.2rem; border:1px solid #e5e7eb;">
+        <h5 style="color:#374151; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Highest Rated Books</h5>
         <div class="cards-grid">
           {% for book in top_rated_books %}
           <div class="book-card">
-            {% if book.image_url_m %}<img src="{{ book.image_url_m }}" alt="{{ book.title }}">{% else %}<div style="width:100%;height:200px;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.75rem;">No cover</div>{% endif %}
+            {% if book.image_url_m %}<img src="{{ book.image_url_m }}" alt="{{ book.title }}">{% else %}<div style="width:100%;height:200px;background:#f0f2f5;display:flex;align-items:center;justify-content:center;color:#374151;font-size:0.75rem;">No cover</div>{% endif %}
             <div class="card-info">
               <div class="card-title">{{ book.title|truncatechars:40 }}</div>
               <div class="card-author">{{ book.author }}</div>
@@ -77,7 +77,7 @@
             </div>
           </div>
           {% empty %}
-          <p style="color:#6b7280;font-size:0.85rem;">No data — import the dataset first.</p>
+          <p style="color:#374151;font-size:0.85rem;">No data — import the dataset first.</p>
           {% endfor %}
         </div>
       </div>
@@ -87,8 +87,8 @@
   <!-- Sentiment summary -->
   <div class="row mb-4">
     <div class="col-12">
-      <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937;">
-        <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Sentiment Analysis of Reviews (Section 2.5)</h5>
+      <div style="background:#ffffff; border-radius:14px; padding:1.5rem; border:1px solid #e5e7eb;">
+        <h5 style="color:#374151; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">Sentiment Analysis of Reviews (Section 2.5)</h5>
         {% if sentiment_available %}
         <div class="d-flex flex-wrap gap-2 mb-3">
           <div class="metric-badge">Positive <span>{{ sentiment_positive }}</span></div>
@@ -111,8 +111,8 @@
   {% if eval_results %}
   <div class="row mb-4">
     <div class="col-12">
-      <div style="background:#141414; border-radius:14px; padding:1.5rem; border:1px solid #1f2937;">
-        <h5 style="color:#9ca3af; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">
+      <div style="background:#ffffff; border-radius:14px; padding:1.5rem; border:1px solid #e5e7eb;">
+        <h5 style="color:#374151; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:1rem;">
           Model Comparison Preview — <a href="{% url 'evaluate' %}" style="color:var(--crimson);">Full report →</a>
         </h5>
         <div class="table-responsive">
@@ -170,8 +170,8 @@ new Chart(document.getElementById('ratingChart'), {
     responsive: true,
     plugins: { legend: { display: false } },
     scales: {
-      x: { ticks: { color: '#9ca3af' }, grid: { color: '#1f2937' } },
-      y: { ticks: { color: '#9ca3af' }, grid: { color: '#1f2937' } }
+      x: { ticks: { color: '#374151' }, grid: { color: '#e5e7eb' } },
+      y: { ticks: { color: '#374151' }, grid: { color: '#e5e7eb' } }
     }
   }
 });
@@ -190,7 +190,7 @@ new Chart(document.getElementById('sentimentChart'), {
   },
   options: {
     responsive: true,
-    plugins: { legend: { labels: { color: '#9ca3af' } } }
+    plugins: { legend: { labels: { color: '#374151' } } }
   }
 });
 {% endif %}

@@ -13,7 +13,7 @@
   <div style="text-align:center;padding:3rem 1rem;">
     <div style="font-size:4rem;margin-bottom:1rem;">📚</div>
     <h3 style="color:var(--text);margin-bottom:.5rem;">Потрібно більше оцінок</h3>
-    <p style="color:#9ca3af;margin-bottom:2rem;">
+    <p style="color:#6b7280;margin-bottom:2rem;">
       Ти оцінив(ла) <strong style="color:var(--crimson);">{{ profile_count }}</strong> книг.
       Потрібно щонайменше <strong style="color:var(--crimson);">{{ min_ratings }}</strong>.
     </p>
@@ -39,7 +39,7 @@
     <i class="fas fa-brain" style="margin-right:.4rem;color:#6366f1;"></i>
     <strong>Повний NCF + LSA гібрид з інференсом ембедінгу (розділи 2.3 + 2.4)</strong><br>
     Псевдо-ембедінг користувача виведено як зважене середнє ембедінгів оцінених книг:<br>
-    <code style="font-size:.78rem;color:#9ca3af;">user_emb = Σ(item_emb(isbn) × rating) / Σ rating</code><br>
+    <code style="font-size:.78rem;color:#374151;">user_emb = Σ(item_emb(isbn) × rating) / Σ rating</code><br>
     <span style="color:#6366f1;">■</span> <strong>60 % NCF(inferred_user, book)</strong> — нелінійна взаємодія через MLP<br>
     <span style="color:#06b6d4;">■</span> <strong>40 % LSA cosine similarity</strong> — семантичний контентний сигнал
   </div>
@@ -61,7 +61,7 @@
       {% if rec.image_url_m %}
       <img src="{{ rec.image_url_m }}" alt="{{ rec.title }}">
       {% else %}
-      <div style="width:100%;height:220px;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#4b5563;font-size:2rem;">
+      <div style="width:100%;height:220px;background:#f0f2f5;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:2rem;">
         <i class="fas fa-book"></i>
       </div>
       {% endif %}
@@ -90,7 +90,7 @@
   </div>
 
   <div style="text-align:center;margin-top:2rem;">
-    <a href="{% url 'explore' %}" class="uid-btn" style="background:#374151;">
+    <a href="{% url 'explore' %}" class="uid-btn" style="background:#e5e7eb;">
       <i class="fas fa-search"></i> Шукати більше книг
     </a>
     <a href="{% url 'taste' %}" class="uid-btn" style="background:var(--crimson);">

@@ -10,9 +10,9 @@
 
   <!-- Nav -->
   <div style="text-align:center; margin-bottom:1.2rem;">
-    <a class="uid-btn" href="{% url 'user_ratings' user_id %}" style="background:#374151;">View Ratings</a>
+    <a class="uid-btn" href="{% url 'user_ratings' user_id %}" style="background:#e5e7eb;">View Ratings</a>
     {% if use_sentiment %}
-    <a class="uid-btn" href="{% url 'user_recommendations' user_id %}" style="background:#374151;">Without Sentiment</a>
+    <a class="uid-btn" href="{% url 'user_recommendations' user_id %}" style="background:#e5e7eb;">Without Sentiment</a>
     <span class="uid-btn" style="background:#7c3aed; cursor:default;">Sentiment ON</span>
     {% else %}
     <a class="uid-btn" href="{% url 'user_recommendations' user_id %}?sentiment=1" style="background:#7c3aed;">+ Enable Sentiment Correction</a>
@@ -20,8 +20,8 @@
   </div>
 
   <!-- Method label -->
-  <p style="text-align:center; color:#6b7280; font-size:0.8rem; margin-bottom:0.5rem;">
-    Method: <strong style="color:#9ca3af;">NCF + LSA Feature Combination Hybrid</strong>{% if use_sentiment %} + VADER Sentiment Correction{% endif %}
+  <p style="text-align:center; color:#374151; font-size:0.8rem; margin-bottom:0.5rem;">
+    Method: <strong style="color:#374151;">NCF + LSA Feature Combination Hybrid</strong>{% if use_sentiment %} + VADER Sentiment Correction{% endif %}
   </p>
 
   <!-- Metrics -->
@@ -41,7 +41,7 @@
 
   <!-- Other user IDs -->
   <div style="text-align:center; margin-bottom:1.5rem;">
-    <span style="color:#6b7280; font-size:0.78rem; text-transform:uppercase; letter-spacing:1px;">Other users: </span>
+    <span style="color:#374151; font-size:0.78rem; text-transform:uppercase; letter-spacing:1px;">Other users: </span>
     {% for id in random_user_ids %}
     <a class="uid-btn" href="{% url 'user_recommendations' id %}">{{ id }}</a>
     {% endfor %}
@@ -55,7 +55,7 @@
       {% if rec.image_url_m %}
       <img src="{{ rec.image_url_m }}" alt="{{ rec.title }}">
       {% else %}
-      <div style="width:100%;height:200px;background:#1f2937;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.75rem;">No cover</div>
+      <div style="width:100%;height:200px;background:#f0f2f5;display:flex;align-items:center;justify-content:center;color:#374151;font-size:0.75rem;">No cover</div>
       {% endif %}
       <div class="card-info">
         <div class="card-title">{{ rec.title|truncatechars:45 }}</div>

@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
   <style>
-    :root { --crimson: #b81024; --bg: #0a0a0a; --text: #f5f0e8; }
+    :root { --crimson: #b81024; --bg: #f5f6fa; --text: #1a1a2e; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; overflow-x: hidden; }
 
@@ -36,14 +36,14 @@
       color: var(--crimson);
       letter-spacing: 6px;
       line-height: 1;
-      text-shadow: 0 0 60px rgba(184,16,36,0.5);
+      text-shadow: 0 0 60px rgba(184,16,36,0.35);
       opacity: 0;
       transform: translateY(-30px);
       animation: fadeDown 0.9s ease forwards 0.3s;
     }
     .tagline {
       font-size: clamp(0.9rem, 2.5vw, 1.2rem);
-      color: #9ca3af;
+      color: #374151;
       margin-top: 1rem;
       letter-spacing: 2px;
       text-transform: uppercase;
@@ -84,15 +84,15 @@
       animation: fadeUp 0.9s ease forwards 1.4s;
     }
     .feature-card {
-      background: #141414;
-      border: 1px solid #1f2937;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
       border-radius: 14px;
       padding: 1.4rem 1.2rem;
       text-align: center;
     }
     .feature-card .icon { font-size: 1.8rem; color: var(--crimson); margin-bottom: 0.6rem; }
     .feature-card h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
-    .feature-card p { font-size: 0.8rem; color: #6b7280; line-height: 1.5; }
+    .feature-card p { font-size: 0.8rem; color: #374151; line-height: 1.5; }
 
     @keyframes fadeDown { to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }

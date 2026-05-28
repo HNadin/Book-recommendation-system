@@ -98,9 +98,9 @@
 {% if has_results %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-const modelNames = {{ chart_labels_json }};
-const precisions = {{ chart_precisions_json }};
-const ndcgs = {{ chart_ndcgs_json }};
+const modelNames = {{ chart_labels_json|safe }};
+const precisions = {{ chart_precisions_json|safe }};
+const ndcgs = {{ chart_ndcgs_json|safe }};
 
 const COLORS = ['#6366f1','#f59e0b','#b81024','#22c55e','#06b6d4'];
 

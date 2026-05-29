@@ -1,8 +1,19 @@
 import csv
+import re
 
 from django.core.management.base import BaseCommand
 
 from bookflix.models import Book
+
+
+def _clean_isbn(raw: str) -> str:
+    """Normalize ISBN: strip spaces, hyphens, .0 float suffix, leading zeros."""
+    val = raw.strip()
+    # handle float representation e.g. "374528373.0"
+    val = re.sub(r"\.0+$", "", val)
+    # remove hyphens
+    val = val.replace("-", "")
+    return val
 
 
 class Command(BaseCommand):
@@ -25,24 +36,37 @@ class Command(BaseCommand):
         with open(path, encoding="utf-8", errors="ignore") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                rating = row.get("average_rating", "").strip()
-                if not rating:
+                rating_str = row.get("average_rating", "").strip()
+                if not rating_str:
                     continue
+                try:
+                    rating = float(rating_str)
+                except ValueError:
+                    continue
+
                 for col in ("isbn", "isbn13"):
-                    val = row.get(col, "").strip().lstrip("0")
+                    raw = row.get(col, "")
+                    if not raw or raw.strip() in ("", "nan", "NaN"):
+                        continue
+                    val = _clean_isbn(raw)
                     if val:
-                        try:
-                            isbn_to_rating[val] = float(rating)
-                        except ValueError:
-                            pass
+                        # store both with and without leading zeros
+                        isbn_to_rating[val] = rating
+                        isbn_to_rating[val.lstrip("0")] = rating
+
+        self.stdout.write(f"Loaded {len(isbn_to_rating)} ISBN entries from CSV")
 
         books = Book.objects.filter(goodreads_rating__isnull=True)
         to_update = []
 
         for book in books.iterator(chunk_size=500):
-            key = book.isbn.lstrip("0")
-            if key in isbn_to_rating:
-                book.goodreads_rating = isbn_to_rating[key]
+            cleaned = _clean_isbn(book.isbn)
+            match = (
+                isbn_to_rating.get(cleaned)
+                or isbn_to_rating.get(cleaned.lstrip("0"))
+            )
+            if match:
+                book.goodreads_rating = match
                 to_update.append(book)
                 updated += 1
             else:

@@ -29,10 +29,10 @@ from bookflix.ml.evaluation import (
 from bookflix.models import Book, Rating, User
 from bookflix.recommendation_algorithms import train_test_split
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_book(isbn="0000000001", title="Test Book", author="Author A"):
     return Book.objects.create(

@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: book-recommendation-system
+    runtime: python
+    pythonVersion: "3.11.9"
+    buildCommand: >
+      pip install --upgrade pip &&
+      pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt &&
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate --noinput
+    startCommand: gunicorn yash.wsgi --log-file -
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: PYTHON_VERSION
+        value: "3.11.9"

@@ -55,6 +55,11 @@ class Command(BaseCommand):
                         isbn_to_rating[val.lstrip("0")] = rating
 
         self.stdout.write(f"Loaded {len(isbn_to_rating)} ISBN entries from CSV")
+        sample_csv = list(isbn_to_rating.keys())[:5]
+        self.stdout.write(f"CSV ISBN sample: {sample_csv}")
+
+        sample_db = list(Book.objects.values_list("isbn", flat=True)[:5])
+        self.stdout.write(f"DB  ISBN sample: {sample_db}")
 
         books = Book.objects.filter(goodreads_rating__isnull=True)
         to_update = []

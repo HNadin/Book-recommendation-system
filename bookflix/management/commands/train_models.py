@@ -15,7 +15,6 @@ Steps
 6. Evaluate all model variants on test split; save metrics JSON.
 """
 
-import json
 import logging
 import os
 import pickle
@@ -331,7 +330,6 @@ class Command(BaseCommand):
 
         # --- NCF ---
         if ncf_model is not None:
-            import torch
             from bookflix.ml.model_store import ncf_predict as _ncf_predict
             import bookflix.ml.model_store as ms
             ms._cache["ncf"] = (ncf_model, ncf_meta)
@@ -382,8 +380,6 @@ class Command(BaseCommand):
                     s_map = pickle.load(f)
 
                 if s_map:
-                    from bookflix.ml.sentiment import apply_sentiment_correction
-
                     def hybrid_sentiment_recommend_fn(uid):
                         ctx = user_context.get(uid, set())
                         liked_ctx = user_context_liked.get(uid, [])

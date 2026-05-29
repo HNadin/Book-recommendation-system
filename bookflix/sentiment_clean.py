@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from textblob import TextBlob
 import re
 
@@ -22,8 +21,12 @@ df['ReviewContent'] = df['ReviewContent'].apply(clean)
 # Calculating Polarity and Subjectivity
 
 
-def polarity(x): return TextBlob(x).sentiment.polarity
-def subjectivity(x): return TextBlob(x).sentiment.subjectivity
+def polarity(x):
+    return TextBlob(x).sentiment.polarity
+
+
+def subjectivity(x):
+    return TextBlob(x).sentiment.subjectivity
 
 
 df['polarity'] = df['ReviewContent'].apply(polarity)

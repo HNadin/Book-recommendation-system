@@ -21,10 +21,8 @@ GET  /api/evaluate/                 → JSON: full metrics comparison table
 import json
 import logging
 import os
-import pickle
 import random
 
-import numpy as np
 import pandas as pd
 from django.db.models import Avg, Count, Q
 from django.http import JsonResponse
@@ -37,15 +35,12 @@ from .models import Book, Rating, User
 from .recommendation_algorithms import (
     evaluate_user_model,
     get_book_semantic_neighbours,
-    get_session_recommendations,
     get_session_recommendations_full_hybrid,
-    get_user_all_rated_isbns,
-    get_user_rated_isbns,
     hybrid_recommendations,
     load_books_df,
     load_data_ratings,
 )
-from .ml.model_store import load_eval_results, MODELS_DIR
+from .ml.model_store import load_eval_results
 
 logger = logging.getLogger(__name__)
 SEED = 42
@@ -305,9 +300,11 @@ def _load_goodreads_map() -> dict:
                 result = {}
                 for _, row in df.iterrows():
                     isbn = str(row[isbn_col]).strip()
+                    has_avg = "average_rating" in df.columns and pd.notna(row.get("average_rating"))
+                    has_cnt = "ratings_count" in df.columns and pd.notna(row.get("ratings_count"))
                     result[isbn] = {
-                        "rating": round(float(row["average_rating"]), 2) if "average_rating" in df.columns and pd.notna(row.get("average_rating")) else None,
-                        "count": int(row["ratings_count"]) if "ratings_count" in df.columns and pd.notna(row.get("ratings_count")) else None,
+                        "rating": round(float(row["average_rating"]), 2) if has_avg else None,
+                        "count": int(row["ratings_count"]) if has_cnt else None,
                     }
                 return result
             except Exception as e:

@@ -9,9 +9,11 @@ from bookflix.models import User
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def preprocess_users_csv(input_file, output_file):
     logger.info(f'Preprocessing CSV: {input_file} -> {output_file}')
-    with open(input_file, newline='', encoding='latin1') as infile, open(output_file, 'w', newline='', encoding='utf-8') as outfile:
+    with open(input_file, newline='', encoding='latin1') as infile, \
+            open(output_file, 'w', newline='', encoding='utf-8') as outfile:
         reader = csv.reader(infile, delimiter=';')
         writer = csv.writer(outfile, delimiter=';')
 
@@ -28,6 +30,7 @@ def preprocess_users_csv(input_file, output_file):
                 current_row = line
         if current_row:
             writer.writerow(current_row)
+
 
 class Command(BaseCommand):
     help = 'Import user data from CSV file'
@@ -61,7 +64,7 @@ class Command(BaseCommand):
 
         with open(temp_file, newline='', encoding='utf-8') as file:
             reader = csv.reader(file, delimiter=';')
-            header = next(reader)  # Skip the header row
+            next(reader)  # Skip the header row
 
             for row in reader:
                 try:

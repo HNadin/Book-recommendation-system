@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Book(models.Model):
     isbn = models.CharField(max_length=200, db_index=True)
     title = models.CharField(max_length=255, db_index=True)
@@ -13,6 +14,7 @@ class Book(models.Model):
     def __str__(self):
         return self.title
 
+
 class User(models.Model):
     user_id = models.IntegerField(unique=True, primary_key=True)
     location = models.CharField(max_length=255)
@@ -20,6 +22,7 @@ class User(models.Model):
 
     def __str__(self):
         return f'User {self.user_id} from {self.location}'
+
 
 class Rating(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

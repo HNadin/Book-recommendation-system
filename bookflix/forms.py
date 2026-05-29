@@ -1,6 +1,5 @@
 from django import forms
 import pandas as pd
-import csv
 
 
 def load_data(nrows):
@@ -39,7 +38,8 @@ def get_list():
 class UserForm(forms.Form):
     field = forms.ChoiceField(label='Select Book', choices=get_my_choices())
     CHOICES = (('Most Popular Books', 'Most Popular Books'),
-               ('Highest Rated Books', 'Highest Rated Books'), ('Over The Year Performance', 'Over The Year Performance'))
+               ('Highest Rated Books', 'Highest Rated Books'),
+               ('Over The Year Performance', 'Over The Year Performance'))
     authors_perf = forms.ChoiceField(
         label='Select author Performance', choices=CHOICES)
 
@@ -50,6 +50,7 @@ class UserForm2(forms.Form):
 
 class UserForm3(forms.Form):
     field = forms.ChoiceField(label='', choices=get_my_choices())
+
 
 class UserRecommendationForm(forms.Form):
     user_id = forms.IntegerField(label='User ID', min_value=1)

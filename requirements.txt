@@ -12,8 +12,8 @@ psycopg2-binary==2.9.9
 
 # Data processing
 numpy==1.26.4
-pandas==2.1.4
-scipy==1.11.4
+pandas==2.2.3
+scipy==1.13.1
 
 # Machine learning
 scikit-learn==1.4.2

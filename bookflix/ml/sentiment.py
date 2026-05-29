@@ -11,8 +11,9 @@ Formula:
 where compound ∈ [-1, 1] and α = 0.5 (empirically chosen).
 """
 
-import pandas as pd
 import logging
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 ALPHA = 0.5

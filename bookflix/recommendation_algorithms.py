@@ -8,20 +8,21 @@ from ml/ directly, so the API surface stays stable as models evolve.
 import logging
 import random
 
-import numpy as np
-import pandas as pd
 from django.db.models import Avg
 
+import numpy as np
+import pandas as pd
+
+from bookflix.ml.evaluation import (
+    RELEVANCE_THRESHOLD,
+    compute_rmse,
+)
+from bookflix.ml.hybrid import cascade_recommend, feature_combination_recommend
 from bookflix.ml.model_store import (
     load_embedder,
     load_ncf,
     load_svd_baseline,
     ncf_predict,
-)
-from bookflix.ml.hybrid import feature_combination_recommend, cascade_recommend
-from bookflix.ml.evaluation import (
-    compute_rmse,
-    RELEVANCE_THRESHOLD,
 )
 
 logger = logging.getLogger(__name__)
@@ -466,7 +467,8 @@ def load_or_compute_nn(tfidf_matrix):
 
 
 def load_or_compute_svd(ratings_df):
-    from surprise import Dataset, Reader, SVD as SurpriseSVD
+    from surprise import SVD as SurpriseSVD
+    from surprise import Dataset, Reader
     reader = Reader(rating_scale=(1, 10))
     data = Dataset.load_from_df(
         ratings_df[["user_id", "book__isbn", "book_rating"]], reader

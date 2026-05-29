@@ -15,17 +15,18 @@ Run with:
 
 import json
 
-import pandas as pd
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from bookflix.models import Book, Rating, User
+import pandas as pd
+
 from bookflix.ml.evaluation import (
     RELEVANCE_THRESHOLD,
     compute_ndcg_at_k,
     compute_precision_at_k,
     compute_rmse,
 )
+from bookflix.models import Book, Rating, User
 from bookflix.recommendation_algorithms import train_test_split
 
 

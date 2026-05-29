@@ -10,9 +10,10 @@ A book is considered "relevant" if its true rating ≥ RELEVANCE_THRESHOLD.
 """
 
 import math
+from typing import Callable
+
 import numpy as np
 from sklearn.metrics import mean_squared_error
-from typing import Callable
 
 RELEVANCE_THRESHOLD = 7  # ratings ≥ 7 are "liked"
 

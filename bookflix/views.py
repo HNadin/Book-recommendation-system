@@ -23,14 +23,16 @@ import logging
 import os
 import random
 
-import pandas as pd
 from django.db.models import Avg, Count, Q
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
+
+import pandas as pd
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from .ml.model_store import load_eval_results
 from .models import Book, Rating, User
 from .recommendation_algorithms import (
     evaluate_user_model,
@@ -40,7 +42,6 @@ from .recommendation_algorithms import (
     load_books_df,
     load_data_ratings,
 )
-from .ml.model_store import load_eval_results
 
 logger = logging.getLogger(__name__)
 SEED = 42

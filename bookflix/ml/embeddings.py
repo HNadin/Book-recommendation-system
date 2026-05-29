@@ -10,10 +10,11 @@ BERT / sentence-transformers can be hot-swapped in via BERTEmbedder
 when the environment has the transformers package available.
 """
 
-import numpy as np
 import pickle
-from sklearn.feature_extraction.text import TfidfVectorizer
+
+import numpy as np
 from sklearn.decomposition import TruncatedSVD
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import normalize
 
 

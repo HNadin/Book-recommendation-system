@@ -1,6 +1,7 @@
+import logging
 import os
 import subprocess
-import logging
+
 from django.core.management.base import BaseCommand, CommandError
 
 # Set up logging

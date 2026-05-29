@@ -20,20 +20,21 @@ import os
 import pickle
 import random
 
-import numpy as np
-import pandas as pd
 from django.core.management.base import BaseCommand
 
-from bookflix.ml.model_store import MODELS_DIR, save_eval_results, _path
+import numpy as np
+import pandas as pd
+
 from bookflix.ml.embeddings import LSAEmbedder
-from bookflix.ml.sentiment import build_book_sentiment_map, apply_sentiment_correction
 from bookflix.ml.evaluation import (
-    compute_rmse,
-    compute_precision_at_k,
-    compute_ndcg_at_k,
     RELEVANCE_THRESHOLD,
+    compute_ndcg_at_k,
+    compute_precision_at_k,
+    compute_rmse,
 )
-from bookflix.recommendation_algorithms import load_data_ratings, load_books_df, train_test_split
+from bookflix.ml.model_store import MODELS_DIR, _path, save_eval_results
+from bookflix.ml.sentiment import apply_sentiment_correction, build_book_sentiment_map
+from bookflix.recommendation_algorithms import load_books_df, load_data_ratings, train_test_split
 
 logger = logging.getLogger(__name__)
 SEED = 42
@@ -154,7 +155,8 @@ class Command(BaseCommand):
 
     def _train_svd(self, train_df):
         try:
-            from surprise import Dataset, Reader, SVD as SurpriseSVD
+            from surprise import SVD as SurpriseSVD
+            from surprise import Dataset, Reader
         except ImportError:
             self.stdout.write(self.style.WARNING("  scikit-surprise not installed; skipping SVD."))
             return None
@@ -330,8 +332,8 @@ class Command(BaseCommand):
 
         # --- NCF ---
         if ncf_model is not None:
-            from bookflix.ml.model_store import ncf_predict as _ncf_predict
             import bookflix.ml.model_store as ms
+            from bookflix.ml.model_store import ncf_predict as _ncf_predict
             ms._cache["ncf"] = (ncf_model, ncf_meta)
 
             def ncf_recommend_fn(uid):

@@ -1,7 +1,9 @@
-from sklearn.neighbors import NearestNeighbors
-from scipy.sparse import csr_matrix
 import pickle
+
 import pandas as pd
+from scipy.sparse import csr_matrix
+from sklearn.neighbors import NearestNeighbors
+
 df = pd.read_csv("reco.csv")
 
 book_pivot1 = df.pivot_table(

@@ -13,8 +13,9 @@ Both components are normalised to [0, 1] across the candidate pool
 before weighting so neither dominates by scale.
 """
 
-import numpy as np
 import logging
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 

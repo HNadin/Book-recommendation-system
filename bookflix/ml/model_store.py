@@ -9,8 +9,8 @@ system unusable.
 Stored artefacts (under bookflix/trained_models/):
   ncf_model.pt        — NCF PyTorch weights
   ncf_meta.pkl        — user/item index mappings + hyperparameters
-  lsa_embedder.pkl    — fitted LSAEmbedder
-  svd_baseline.pkl    — Surprise SVD (for comparison table)
+  bert_embedder.pkl   — fitted BERTEmbedder (all-MiniLM-L6-v2 embeddings)
+  svd_baseline.pkl    — SVD baseline (for comparison table)
   eval_results.json   — cached metric comparison across all model variants
 """
 
@@ -76,14 +76,21 @@ def load_ncf():
 
 def load_embedder():
     def _load():
-        path = _path("lsa_embedder.pkl")
-        if not os.path.exists(path):
-            logger.warning("LSA embedder not found — run `python manage.py train_models`.")
-            return None
-        from bookflix.ml.embeddings import LSAEmbedder
-        emb = LSAEmbedder.load(path)
-        logger.info("LSA embedder loaded.")
-        return emb
+        bert_path = _path("bert_embedder.pkl")
+        if os.path.exists(bert_path):
+            from bookflix.ml.embeddings import BERTEmbedder
+            emb = BERTEmbedder.load(bert_path)
+            logger.info("BERT embedder loaded.")
+            return emb
+        # Backward-compat: fall back to legacy LSA artefact if present
+        lsa_path = _path("lsa_embedder.pkl")
+        if os.path.exists(lsa_path):
+            from bookflix.ml.embeddings import LSAEmbedder
+            emb = LSAEmbedder.load(lsa_path)
+            logger.info("LSA embedder loaded (legacy).")
+            return emb
+        logger.warning("No embedder found — run `python manage.py train_models`.")
+        return None
 
     return _cached("embedder", _load)
 

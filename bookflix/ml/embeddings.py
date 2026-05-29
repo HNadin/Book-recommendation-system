@@ -1,13 +1,11 @@
 """
 Semantic vector representations — Section 2.2 of thesis.
 
-Uses LSA (TF-IDF + TruncatedSVD) as the primary semantic model.
-Richer content signal than the previous TF-IDF-on-title-only approach:
-combines title, author, and publisher with bigrams and 5 000 vocabulary
-terms, then projects to 100-dimensional semantic space.
+Primary model: BERTEmbedder using sentence-transformers all-MiniLM-L6-v2,
+producing 384-dim normalised embeddings from book title + author text.
 
-BERT / sentence-transformers can be hot-swapped in via BERTEmbedder
-when the environment has the transformers package available.
+LSAEmbedder (TF-IDF + TruncatedSVD) is retained as a lightweight
+fallback for environments without the sentence-transformers package.
 """
 
 import pickle

@@ -4,7 +4,7 @@ Feature Combination hybrid model — Section 2.4 of thesis.
 Moves beyond the original cascade approach (content → SVD re-rank)
 to a true meta-level Feature Combination that merges:
   1. NCF collaborative signal  (learned user–item interaction score)
-  2. Semantic content signal   (cosine similarity via LSA embeddings)
+  2. Semantic content signal   (cosine similarity via BERT embeddings)
 
 The combined score for a (user, book) pair:
     score = w_ncf · ncf_score_norm + w_sem · semantic_similarity
@@ -45,7 +45,7 @@ def feature_combination_recommend(
     ----------
     user_id          : integer user ID
     candidate_isbns  : pool of candidate book ISBNs (unrated by user)
-    embedder         : fitted LSAEmbedder or BERTEmbedder
+    embedder         : fitted BERTEmbedder (or LSAEmbedder legacy fallback)
     rated_isbns      : ISBNs of books the user rated >= RELEVANCE_THRESHOLD
     ncf_score_fn     : callable(user_id, isbn) -> float | None
     top_n            : number of recommendations to return

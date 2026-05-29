@@ -11,7 +11,7 @@ Steps
 2. Apply VADER sentiment correction to train ratings (Section 2.5).
 3. Train NCF on corrected train ratings (Section 2.3).
 4. Train SVD on same train split (baseline for comparison, Section 3.5).
-5. Fit LSA semantic embedder on all books (Section 2.2).
+5. Fit BERT semantic embedder on all books (Section 2.2).
 6. Evaluate all model variants on test split; save metrics JSON.
 """
 
@@ -25,7 +25,7 @@ from django.core.management.base import BaseCommand
 import numpy as np
 import pandas as pd
 
-from bookflix.ml.embeddings import LSAEmbedder
+from bookflix.ml.embeddings import BERTEmbedder
 from bookflix.ml.evaluation import (
     RELEVANCE_THRESHOLD,
     compute_ndcg_at_k,
@@ -43,7 +43,7 @@ np.random.seed(SEED)
 
 
 class Command(BaseCommand):
-    help = "Train NCF, SVD baseline, and LSA embedder; save artefacts + evaluation metrics."
+    help = "Train NCF, SVD baseline, and BERT embedder; save artefacts + evaluation metrics."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -103,12 +103,12 @@ class Command(BaseCommand):
         with open(_path("sentiment_map.pkl"), "wb") as f:
             pickle.dump(sentiment_map, f)
 
-        # --- LSA embedder ---
-        self.stdout.write("=== Step 3: Training LSA semantic embedder ===")
-        embedder = LSAEmbedder(n_components=100)
+        # --- BERT embedder (Section 2.2) ---
+        self.stdout.write("=== Step 3: Training BERT semantic embedder (all-MiniLM-L6-v2) ===")
+        embedder = BERTEmbedder()
         embedder.fit(books_df)
-        embedder.save(_path("lsa_embedder.pkl"))
-        self.stdout.write("  LSA embedder saved.")
+        embedder.save(_path("bert_embedder.pkl"))
+        self.stdout.write("  BERT embedder saved.")
 
         # --- SVD baseline ---
         self.stdout.write("=== Step 4: Training SVD baseline ===")
@@ -309,7 +309,7 @@ class Command(BaseCommand):
                 f"ndcg_at_{k}": round(ndcg, 4),
             }
 
-        # --- Content-only (LSA cosine) ---
+        # --- Content-only (BERT cosine) ---
         if embedder:
             def content_recommend(uid):
                 ctx = user_context.get(uid, set())
@@ -324,7 +324,7 @@ class Command(BaseCommand):
                 return [candidates[i] for i in ranked]
 
             prec, ndcg = _ranking(content_recommend)
-            results["Content-only (LSA)"] = {
+            results["Content-only (BERT)"] = {
                 "rmse": None,
                 f"precision_at_{k}": round(prec, 4),
                 f"ndcg_at_{k}": round(ndcg, 4),
@@ -371,7 +371,7 @@ class Command(BaseCommand):
                     return [r["isbn"] for r in ranked]
 
                 prec, ndcg = _ranking(hybrid_recommend_fn)
-                results["NCF + LSA Hybrid (Feature Combination)"] = {
+                results["NCF + BERT Hybrid (Feature Combination)"] = {
                     "rmse": None,
                     f"precision_at_{k}": round(prec, 4),
                     f"ndcg_at_{k}": round(ndcg, 4),
@@ -404,7 +404,7 @@ class Command(BaseCommand):
 
                     rmse = _rmse_for(hybrid_rmse_sentiment)
                     prec, ndcg = _ranking(hybrid_sentiment_recommend_fn)
-                    results["NCF + LSA + Sentiment Correction"] = {
+                    results["NCF + BERT + Sentiment Correction"] = {
                         "rmse": round(rmse, 4) if rmse else None,
                         f"precision_at_{k}": round(prec, 4),
                         f"ndcg_at_{k}": round(ndcg, 4),

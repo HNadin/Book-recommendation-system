@@ -9,15 +9,22 @@ from bookflix.models import Book
 def _clean_isbn(raw: str) -> str:
     """Normalize ISBN: strip spaces, hyphens, float/scientific notation."""
     val = raw.strip()
-    # handle scientific notation e.g. "9.78043902348e+12" or float "374528373.0"
-    if "e" in val.lower() or (val.replace(".", "", 1).replace("-", "").isdigit() and "." in val):
+    if "e" in val.lower() or ("." in val and val.replace(".", "", 1).replace("-", "").isdigit()):
         try:
             val = str(int(float(val)))
         except (ValueError, OverflowError):
             pass
-    # remove hyphens
     val = val.replace("-", "")
     return val
+
+
+def _normalize_title(title: str) -> str:
+    """Lowercase, strip series suffixes like '(HP #1)', remove articles, punctuation."""
+    t = title.lower()
+    t = re.sub(r"\s*\([^)]*\)", "", t)
+    t = re.sub(r"^(the|a|an)\s+", "", t)
+    t = re.sub(r"[^a-z0-9\s]", "", t)
+    return " ".join(t.split())
 
 
 class Command(BaseCommand):
@@ -34,8 +41,11 @@ class Command(BaseCommand):
         path = options["csv_path"]
         updated = 0
         skipped = 0
+        isbn_matched = 0
+        title_matched = 0
 
         isbn_to_rating: dict[str, float] = {}
+        title_to_rating: dict[str, float] = {}
 
         with open(path, encoding="utf-8", errors="ignore") as f:
             reader = csv.DictReader(f)
@@ -54,30 +64,33 @@ class Command(BaseCommand):
                         continue
                     val = _clean_isbn(raw)
                     if val:
-                        # store both with and without leading zeros
                         isbn_to_rating[val] = rating
                         isbn_to_rating[val.lstrip("0")] = rating
 
-        self.stdout.write(f"Loaded {len(isbn_to_rating)} ISBN entries from CSV")
-        self.stdout.write(f"CSV sample keys: {list(isbn_to_rating.keys())[:8]}")
+                title = row.get("title", "").strip()
+                if title:
+                    norm = _normalize_title(title)
+                    if norm:
+                        title_to_rating[norm] = rating
 
-        first_isbns = list(Book.objects.values_list("isbn", flat=True)[:5])
-        self.stdout.write(f"DB ISBNs: {first_isbns}")
-        for raw_isbn in first_isbns:
-            c = _clean_isbn(raw_isbn)
-            s = c.lstrip("0")
-            hit = isbn_to_rating.get(c) or isbn_to_rating.get(s)
-            self.stdout.write(f"  {raw_isbn!r} -> {c!r} / {s!r} -> {hit}")
+        self.stdout.write(
+            f"Loaded {len(isbn_to_rating)} ISBN entries, {len(title_to_rating)} title entries from CSV"
+        )
 
         books = Book.objects.filter(goodreads_rating__isnull=True)
         to_update = []
 
         for book in books.iterator(chunk_size=500):
             cleaned = _clean_isbn(book.isbn)
-            match = (
-                isbn_to_rating.get(cleaned)
-                or isbn_to_rating.get(cleaned.lstrip("0"))
-            )
+            match = isbn_to_rating.get(cleaned) or isbn_to_rating.get(cleaned.lstrip("0"))
+            if match:
+                isbn_matched += 1
+            else:
+                norm_title = _normalize_title(book.title or "")
+                match = title_to_rating.get(norm_title)
+                if match:
+                    title_matched += 1
+
             if match:
                 book.goodreads_rating = match
                 to_update.append(book)
@@ -87,5 +100,8 @@ class Command(BaseCommand):
 
         Book.objects.bulk_update(to_update, ["goodreads_rating"], batch_size=500)
         self.stdout.write(
-            self.style.SUCCESS(f"Done: {updated} updated, {skipped} not matched")
+            self.style.SUCCESS(
+                f"Done: {updated} updated ({isbn_matched} by ISBN, {title_matched} by title), "
+                f"{skipped} not matched"
+            )
         )

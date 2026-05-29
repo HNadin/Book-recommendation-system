@@ -53,13 +53,10 @@
         <!-- Рейтинги -->
         {% include 'partials/rating_badges.html' with bx_rating=rec.bx_rating bx_count=rec.bx_count goodreads=rec.goodreads %}
 
-        <!-- Оцінка моделі -->
-        {% if rec.score %}
-        <div style="margin-top:4px;font-size:.68rem;line-height:1.7;">
-          <span style="color:#6366f1;" title="Hybrid score">⬡ {{ rec.score }}</span><br>
-          {% if rec.ncf_score %}<span style="color:#818cf8;" title="NCF (inferred embedding)">NCF {{ rec.ncf_score }}</span>  {% endif %}
-          {% if rec.sem_score %}<span style="color:#06b6d4;" title="LSA semantic">LSA {{ rec.sem_score }}</span>{% endif %}
-          {% if rec.pop_score and not rec.ncf_score %}<br><span style="color:#22c55e;" title="Avg rating">★ {{ rec.pop_score }}</span>{% endif %}
+        <!-- Goodreads рейтинг -->
+        {% if rec.goodreads_rating %}
+        <div style="margin-top:4px;font-size:.72rem;color:#e07b39;font-weight:600;">
+          ★ {{ rec.goodreads_rating }} <span style="color:#9ca3af;font-weight:400;">Goodreads</span>
         </div>
         {% endif %}
 

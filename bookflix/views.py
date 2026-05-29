@@ -71,6 +71,7 @@ def _enrich_with_book_objects(isbn_list: list[str]) -> list[dict]:
                 "author": b.author,
                 "year_of_publication": b.year_of_publication,
                 "image_url_m": b.image_url_m,
+                "goodreads_rating": b.goodreads_rating,
             })
     return enriched
 

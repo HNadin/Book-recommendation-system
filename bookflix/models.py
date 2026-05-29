@@ -10,6 +10,7 @@ class Book(models.Model):
     image_url_s = models.URLField()
     image_url_m = models.URLField()
     image_url_l = models.URLField()
+    goodreads_rating = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return self.title

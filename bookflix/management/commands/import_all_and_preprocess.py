@@ -7,6 +7,7 @@ from django.core.management.base import BaseCommand, CommandError
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class Command(BaseCommand):
     help = 'Run the full import and pre-processing sequence'
 
@@ -33,6 +34,7 @@ class Command(BaseCommand):
                 raise CommandError(f"Command failed: {' '.join(command)}")
 
         self.stdout.write(self.style.SUCCESS('Successfully ran all commands and scripts'))
+
 
 if __name__ == "__main__":
     Command().handle()

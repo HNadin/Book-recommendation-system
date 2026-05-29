@@ -11,7 +11,6 @@ Formula:
 where compound ∈ [-1, 1] and α = 0.5 (empirically chosen).
 """
 
-import numpy as np
 import pandas as pd
 import logging
 

@@ -24,5 +24,9 @@ urlpatterns = [
     path("api/session/clear/", views.api_session_clear, name="api_session_clear"),
 
     # Legacy alias
-    path("api/fetch_hybrid_recommendations/<int:user_id>/", views.fetch_hybrid_recommendations, name="fetch_hybrid_recommendations"),
+    path(
+        "api/fetch_hybrid_recommendations/<int:user_id>/",
+        views.fetch_hybrid_recommendations,
+        name="fetch_hybrid_recommendations",
+    ),
 ]

@@ -1,6 +1,5 @@
 import csv
 import logging
-import os
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from bookflix.models import Book
@@ -9,8 +8,10 @@ from bookflix.models import Book
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def preprocess_csv(input_file, output_file, header):
-    with open(input_file, 'r', encoding='latin1') as infile, open(output_file, 'w', encoding='latin1', newline='') as outfile:
+    with open(input_file, 'r', encoding='latin1') as infile, \
+            open(output_file, 'w', encoding='latin1', newline='') as outfile:
         reader = csv.reader(infile, delimiter=';', quotechar='"')
         writer = csv.writer(outfile, delimiter=';', quotechar='"')
 
@@ -19,13 +20,14 @@ def preprocess_csv(input_file, output_file, header):
         for row in reader:
             # Handle special characters like &amp; in publisher names
             row = [field.replace('&amp;', '&') for field in row]
-            
+
             # Ensure the row has the correct number of columns by filling missing values with 'N/A'
             if len(row) < len(header):
                 row.extend(['N/A'] * (len(header) - len(row)))
             elif len(row) > len(header):
                 row = row[:len(header)]
             writer.writerow(row)
+
 
 class Command(BaseCommand):
     help = 'Import book data from CSV file'
@@ -37,7 +39,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         csv_file = kwargs['csv_file']
         temp_csv_file_path = 'temp_books.csv'
-        
+
         # Preprocess CSV to ensure correct alignment
         with open(csv_file, newline='', encoding='latin1') as file:
             reader = csv.reader(file, delimiter=';', quotechar='"')

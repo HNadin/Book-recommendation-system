@@ -8,6 +8,7 @@ from bookflix.models import Rating, User, Book
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class Command(BaseCommand):
     help = 'Import rating data from CSV file'
 
@@ -27,7 +28,7 @@ class Command(BaseCommand):
 
         with open(csv_file, newline='', encoding='latin1') as file:  # Changed encoding to 'latin1'
             reader = csv.reader(file, delimiter=';')
-            header = next(reader)  # Skip the header row
+            next(reader)  # Skip the header row
 
             for row in reader:
                 try:

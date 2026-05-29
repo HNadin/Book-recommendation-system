@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from bookflix.models import Rating
 
+
 class Command(BaseCommand):
     help = 'Flush the Book table'
 

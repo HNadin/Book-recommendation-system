@@ -17,13 +17,10 @@ from bookflix.ml.model_store import (
     load_ncf,
     load_svd_baseline,
     ncf_predict,
-    ncf_recommend,
 )
 from bookflix.ml.hybrid import feature_combination_recommend, cascade_recommend
 from bookflix.ml.evaluation import (
     compute_rmse,
-    compute_precision_at_k,
-    compute_ndcg_at_k,
     RELEVANCE_THRESHOLD,
 )
 
@@ -317,7 +314,7 @@ def train_test_split(ratings_df: pd.DataFrame, test_ratio: float = 0.2):
 # ---------------------------------------------------------------------------
 
 def get_user_rated_isbns(user_id: int, ratings_df: pd.DataFrame,
-                          min_rating: int = RELEVANCE_THRESHOLD) -> list[str]:
+                         min_rating: int = RELEVANCE_THRESHOLD) -> list[str]:
     user_rows = ratings_df[ratings_df["user_id"] == user_id]
     liked = user_rows[user_rows["book_rating"] >= min_rating]["book__isbn"].tolist()
     return liked
@@ -346,7 +343,6 @@ def hybrid_recommendations(
     Falls back to SVD-cascade when NCF weights are absent.
     """
     embedder = load_embedder()
-    rating_col = "adjusted_rating" if use_sentiment_adjusted else "book_rating"
 
     all_isbns = books_df["isbn"].tolist()
     rated_isbns = get_user_all_rated_isbns(user_id, ratings_df)
@@ -370,6 +366,7 @@ def hybrid_recommendations(
     # --- Cascade SVD fallback ---
     if embedder is not None:
         svd = load_svd_baseline()
+
         def svd_score(uid, isbn):
             if svd is None:
                 return 5.0
@@ -402,7 +399,6 @@ def svd_recommendations(
     top_n: int = 10,
 ) -> list[dict]:
     """SVD baseline for the comparison table (Section 3.5)."""
-    from surprise import Dataset, Reader, SVD as SurpriseSVD
     svd = load_svd_baseline()
     if svd is None:
         return []
@@ -456,7 +452,6 @@ def compute_average_ratings():
 
 def build_tfidf_matrix():
     from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.neighbors import NearestNeighbors
     books = load_books_df()
     tfidf = TfidfVectorizer(stop_words="english", max_features=1000)
     matrix = tfidf.fit_transform(books["title"].fillna(""))
@@ -481,9 +476,9 @@ def load_or_compute_svd(ratings_df):
     return svd
 
 
-def content_based_recommendations(user_id, ratings_df, tfidf_matrix, books, nn,
-                                   num_recommendations=10):
-    from bookflix.ml.embeddings import LSAEmbedder
+def content_based_recommendations(
+        user_id, ratings_df, tfidf_matrix, books, nn,
+        num_recommendations=10):
     embedder = load_embedder()
     if embedder is None:
         return books.head(num_recommendations)

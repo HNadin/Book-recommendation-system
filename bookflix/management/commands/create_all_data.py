@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class Command(BaseCommand):
     help = 'Run import commands for users, books, and ratings in sequence'
 

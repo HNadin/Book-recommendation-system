@@ -57,6 +57,7 @@ def load_ncf():
             logger.warning("NCF model not found — run `python manage.py train_models`.")
             return None
         import torch
+
         from bookflix.ml.ncf import NCF
         with open(meta_path, "rb") as f:
             meta = pickle.load(f)

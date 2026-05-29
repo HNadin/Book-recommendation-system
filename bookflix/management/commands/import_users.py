@@ -1,8 +1,10 @@
 import csv
 import logging
 import os
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
+
 from bookflix.models import User
 
 # Set up logging

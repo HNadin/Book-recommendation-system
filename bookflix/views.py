@@ -344,7 +344,7 @@ def _enrich_books_with_stats(isbn_list: list) -> list:
             "image_url_m": b.image_url_m,
             "bx_rating": round(b.avg, 1) if b.avg else None,
             "bx_count": b.n,
-            "goodreads": _get_goodreads(isbn),
+            "goodreads": _get_goodreads(isbn) or ({"rating": round(b.goodreads_rating, 2)} if b.goodreads_rating else None),
         })
     return result
 
@@ -461,7 +461,7 @@ def explore_view(request):
                 "image_url_m": b.image_url_m,
                 "bx_rating": round(b.avg, 1) if b.avg else None,
                 "bx_count": b.n,
-                "goodreads": _get_goodreads(b.isbn),
+                "goodreads": _get_goodreads(b.isbn) or ({"rating": round(b.goodreads_rating, 2)} if b.goodreads_rating else None),
                 "user_rating": profile.get(b.isbn),
             }
             for b in qs
@@ -480,7 +480,7 @@ def explore_view(request):
                 "image_url_m": book_qs.image_url_m,
                 "bx_rating": round(book_qs.avg, 1) if book_qs.avg else None,
                 "bx_count": book_qs.n,
-                "goodreads": _get_goodreads(isbn),
+                "goodreads": _get_goodreads(isbn) or ({"rating": round(book_qs.goodreads_rating, 2)} if book_qs.goodreads_rating else None),
                 "user_rating": profile.get(isbn),
             }
             try:
@@ -500,7 +500,7 @@ def explore_view(request):
                         "author": nb_books[nb_isbn].author,
                         "image_url_m": nb_books[nb_isbn].image_url_m,
                         "bx_rating": round(nb_books[nb_isbn].avg, 1) if nb_books[nb_isbn].avg else None,
-                        "goodreads": _get_goodreads(nb_isbn),
+                        "goodreads": _get_goodreads(nb_isbn) or ({"rating": round(nb_books[nb_isbn].goodreads_rating, 2)} if nb_books[nb_isbn].goodreads_rating else None),
                         "score": score_map[nb_isbn],
                         "user_rating": profile.get(nb_isbn),
                     }

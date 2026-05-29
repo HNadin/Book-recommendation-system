@@ -1,0 +1,22 @@
+{
+  "SVD (baseline)": {
+    "rmse": 1.6271,
+    "precision_at_10": 0.002,
+    "ndcg_at_10": 0.0056
+  },
+  "Content-only (LSA)": {
+    "rmse": null,
+    "precision_at_10": 0.004,
+    "ndcg_at_10": 0.0125
+  },
+  "NCF": {
+    "rmse": 1.9448,
+    "precision_at_10": 0.002,
+    "ndcg_at_10": 0.0044
+  },
+  "NCF + LSA Hybrid (Feature Combination)": {
+    "rmse": null,
+    "precision_at_10": 0.0035,
+    "ndcg_at_10": 0.0136
+  }
+}

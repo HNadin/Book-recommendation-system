@@ -14,7 +14,6 @@ Run with:
 """
 
 import json
-import math
 
 import pandas as pd
 from django.test import Client, TestCase
@@ -63,7 +62,7 @@ class BookModelTest(TestCase):
         self.assertEqual(Book.objects.count(), 1)
 
     def test_fields_stored_correctly(self):
-        book = _make_book(isbn="1234567890", title="Dune", author="Herbert")
+        _make_book(isbn="1234567890", title="Dune", author="Herbert")
         fetched = Book.objects.get(isbn="1234567890")
         self.assertEqual(fetched.author, "Herbert")
         self.assertEqual(fetched.year_of_publication, 2000)

@@ -28,7 +28,7 @@
   <div style="display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:center;margin-bottom:1.5rem;">
     <div class="metric-badge">Оцінено книг <span>{{ profile_count }}</span></div>
     <div class="metric-badge">Сподобалось <span>{{ liked_count }}</span></div>
-    <div class="metric-badge">Метод <span>Семантика (LSA)</span></div>
+    <div class="metric-badge">Метод <span>BERT + NCF</span></div>
     <a href="{% url 'taste' %}" style="font-size:.82rem;color:var(--crimson);margin-left:.5rem;">
       <i class="fas fa-edit"></i> Редагувати смак
     </a>
@@ -78,7 +78,7 @@
 
   {% else %}
   <div class="alert-warn-dark" style="max-width:500px;margin:2rem auto;text-align:center;">
-    Не вдалося згенерувати рекомендації. Можливо, LSA-ембедер ще не навчений.<br>
+    Не вдалося згенерувати рекомендації. Можливо, BERT-ембедер ще не навчений.<br>
     Запусти <code>python manage.py train_models</code>.
   </div>
   {% endif %}

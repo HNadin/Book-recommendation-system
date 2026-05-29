@@ -17,6 +17,7 @@ scipy==1.13.1
 
 # Machine learning
 scikit-learn==1.4.2
+sentence-transformers==3.0.1
 
 # Deep learning — NCF (CPU-only on Heroku)
 torch==2.2.2+cpu

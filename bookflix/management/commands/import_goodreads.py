@@ -7,10 +7,14 @@ from bookflix.models import Book
 
 
 def _clean_isbn(raw: str) -> str:
-    """Normalize ISBN: strip spaces, hyphens, .0 float suffix, leading zeros."""
+    """Normalize ISBN: strip spaces, hyphens, float/scientific notation."""
     val = raw.strip()
-    # handle float representation e.g. "374528373.0"
-    val = re.sub(r"\.0+$", "", val)
+    # handle scientific notation e.g. "9.78043902348e+12" or float "374528373.0"
+    if "e" in val.lower() or (val.replace(".", "", 1).replace("-", "").isdigit() and "." in val):
+        try:
+            val = str(int(float(val)))
+        except (ValueError, OverflowError):
+            pass
     # remove hyphens
     val = val.replace("-", "")
     return val
@@ -55,11 +59,6 @@ class Command(BaseCommand):
                         isbn_to_rating[val.lstrip("0")] = rating
 
         self.stdout.write(f"Loaded {len(isbn_to_rating)} ISBN entries from CSV")
-        sample_csv = list(isbn_to_rating.keys())[:5]
-        self.stdout.write(f"CSV ISBN sample: {sample_csv}")
-
-        sample_db = list(Book.objects.values_list("isbn", flat=True)[:5])
-        self.stdout.write(f"DB  ISBN sample: {sample_db}")
 
         books = Book.objects.filter(goodreads_rating__isnull=True)
         to_update = []

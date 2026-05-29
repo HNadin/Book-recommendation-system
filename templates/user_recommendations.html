@@ -60,9 +60,7 @@
       <div class="card-info">
         <div class="card-title">{{ rec.title|truncatechars:45 }}</div>
         <div class="card-author">{{ rec.author }}</div>
-        {% if rec.score %}<div class="card-score">Score: {{ rec.score }}</div>{% endif %}
-        {% if rec.ncf_score %}<div class="card-score" style="color:#6366f1;">NCF: {{ rec.ncf_score }}</div>{% endif %}
-        {% if rec.sem_score %}<div class="card-score" style="color:#06b6d4;">Sem: {{ rec.sem_score }}</div>{% endif %}
+        {% if rec.goodreads_rating %}<div class="card-score" style="color:#e07b39;">★ {{ rec.goodreads_rating }} Goodreads</div>{% endif %}
       </div>
     </div>
     {% endfor %}

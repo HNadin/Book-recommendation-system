@@ -153,6 +153,7 @@ def user_recommendations_view(request, user_id: int):
     Supports ?mode=hybrid (default) | cascade | svd via query param.
     """
     use_sentiment = request.GET.get("sentiment", "0") == "1"
+    err = None
 
     try:
         ratings_df = load_data_ratings()
@@ -169,7 +170,7 @@ def user_recommendations_view(request, user_id: int):
         for item in enriched:
             item.update(score_map.get(item["isbn"], {}))
 
-        metrics, err = evaluate_user_model(user_id, ratings_df)
+        metrics, _ = evaluate_user_model(user_id, ratings_df)
     except Exception as e:
         logger.exception("Error generating recommendations for user %s", user_id)
         enriched = []
@@ -192,7 +193,6 @@ def evaluate_view(request):
     Model comparison dashboard — Section 3.5 of thesis.
     Loads pre-computed metrics from eval_results.json.
     """
-    import json as _json
     results = load_eval_results()
     models_list = []
     chart_precisions = []
@@ -205,9 +205,9 @@ def evaluate_view(request):
     return render(request, "evaluate.html", {
         "models": models_list,
         "has_results": bool(results),
-        "chart_labels_json": _json.dumps([m["name"] for m in models_list]),
-        "chart_precisions_json": _json.dumps(chart_precisions),
-        "chart_ndcgs_json": _json.dumps(chart_ndcgs),
+        "chart_labels_json": json.dumps([m["name"] for m in models_list]),
+        "chart_precisions_json": json.dumps(chart_precisions),
+        "chart_ndcgs_json": json.dumps(chart_ndcgs),
     })
 
 
@@ -236,7 +236,7 @@ def api_recommendations(request, user_id: int):
         for item in enriched:
             item.update(score_map.get(item["isbn"], {}))
 
-        metrics, err = evaluate_user_model(user_id, ratings_df)
+        metrics, _ = evaluate_user_model(user_id, ratings_df)
     except Exception as e:
         logger.exception("API error for user %s", user_id)
         return Response({"error": str(e)}, status=500)

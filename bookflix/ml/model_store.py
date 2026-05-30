@@ -112,12 +112,12 @@ def load_eval_results() -> dict:
     path = _path("eval_results.json")
     if not os.path.exists(path):
         return {}
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
 def save_eval_results(results: dict):
-    with open(_path("eval_results.json"), "w") as f:
+    with open(_path("eval_results.json"), "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
 

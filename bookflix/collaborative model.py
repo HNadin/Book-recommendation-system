@@ -17,4 +17,5 @@ model = NearestNeighbors(algorithm='brute')  # model
 model.fit(book_sparse1)
 
 filename = 'collaborative_model.pkl'
-pickle.dump(model, open(filename, 'wb'))
+with open(filename, 'wb') as f:
+    pickle.dump(model, f)

@@ -334,7 +334,7 @@ def hybrid_recommendations(
     ratings_df: pd.DataFrame,
     books_df: pd.DataFrame,
     top_n: int = 10,
-    use_sentiment_adjusted: bool = False,
+    use_sentiment_adjusted: bool = False,  # reserved for future sentiment-weighted hybrid
 ) -> list[dict]:
     """
     Feature Combination hybrid (Section 2.4):
@@ -353,7 +353,6 @@ def hybrid_recommendations(
     # --- NCF path ---
     ncf_result = load_ncf()
     if ncf_result is not None and embedder is not None:
-        model, meta = ncf_result
         ranked = feature_combination_recommend(
             user_id=user_id,
             candidate_isbns=candidate_isbns[:2000],
@@ -479,7 +478,7 @@ def load_or_compute_svd(ratings_df):
 
 
 def content_based_recommendations(
-        user_id, ratings_df, tfidf_matrix, books, nn,
+        user_id, ratings_df, tfidf_matrix, books, nn=None,
         num_recommendations=10):
     embedder = load_embedder()
     if embedder is None:
@@ -489,7 +488,6 @@ def content_based_recommendations(
     profile = embedder.build_user_profile(liked)
     if profile is None:
         return books.head(num_recommendations)
-    import numpy as np
     candidates = books[~books["isbn"].isin(rated)].copy()
     vecs = np.stack([embedder.get(isbn) for isbn in candidates["isbn"]])
     candidates["_sim"] = vecs @ profile

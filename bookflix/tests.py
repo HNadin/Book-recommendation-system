@@ -346,7 +346,7 @@ class TrainTestSplitTest(TestCase):
 
     def test_all_users_in_train(self):
         df = self._make_df(n_users=50, ratings_per_user=5)
-        train, test = train_test_split(df, test_ratio=0.2)
+        train, _ = train_test_split(df, test_ratio=0.2)
         train_users = set(train["user_id"].unique())
         all_users = set(df["user_id"].unique())
         self.assertEqual(train_users, all_users)
@@ -367,6 +367,6 @@ class TrainTestSplitTest(TestCase):
 
     def test_reproducible_with_same_seed(self):
         df = self._make_df(n_users=20, ratings_per_user=10)
-        train1, test1 = train_test_split(df, test_ratio=0.2)
-        train2, test2 = train_test_split(df, test_ratio=0.2)
+        train1, _ = train_test_split(df, test_ratio=0.2)
+        train2, _ = train_test_split(df, test_ratio=0.2)
         self.assertListEqual(list(train1.index), list(train2.index))

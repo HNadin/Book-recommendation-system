@@ -13,7 +13,7 @@ class Book(models.Model):
     goodreads_rating = models.FloatField(null=True, blank=True)
 
     def __str__(self):
-        return self.title
+        return str(self.title)
 
 
 class User(models.Model):

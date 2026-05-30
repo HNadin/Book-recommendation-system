@@ -3,13 +3,13 @@ from django.db import models
 
 class Book(models.Model):
     isbn = models.CharField(max_length=200, db_index=True)
-    title = models.CharField(max_length=255, db_index=True)
-    author = models.CharField(max_length=255)
+    title = models.TextField(db_index=True)
+    author = models.TextField()
     year_of_publication = models.IntegerField(null=True, blank=True)
-    publisher = models.CharField(max_length=255)
-    image_url_s = models.URLField()
-    image_url_m = models.URLField()
-    image_url_l = models.URLField()
+    publisher = models.TextField()
+    image_url_s = models.TextField(blank=True, default="")
+    image_url_m = models.TextField(blank=True, default="")
+    image_url_l = models.TextField(blank=True, default="")
     goodreads_rating = models.FloatField(null=True, blank=True)
 
     def __str__(self):
@@ -18,7 +18,7 @@ class Book(models.Model):
 
 class User(models.Model):
     user_id = models.IntegerField(unique=True, primary_key=True)
-    location = models.CharField(max_length=255)
+    location = models.TextField()
     age = models.IntegerField(null=True, blank=True)
 
     def __str__(self):

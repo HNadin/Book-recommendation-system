@@ -63,6 +63,14 @@ class Command(BaseCommand):
             help="NCF learning rate (default: 0.001)"
         )
         parser.add_argument(
+            "--weight-decay", type=float, default=1e-5,
+            help="NCF L2 regularization on embeddings/weights (default: 1e-5)"
+        )
+        parser.add_argument(
+            "--patience", type=int, default=5,
+            help="Early-stopping patience: stop after N epochs without val improvement (default: 5)"
+        )
+        parser.add_argument(
             "--reviews-csv", type=str, default="Reviews.csv",
             help="Path to reviews CSV for sentiment correction"
         )
@@ -149,6 +157,8 @@ class Command(BaseCommand):
             epochs=options["epochs"],
             batch_size=options["batch_size"],
             lr=options["lr"],
+            weight_decay=options["weight_decay"],
+            patience=options["patience"],
         )
         if ncf_model:
             import torch
@@ -195,11 +205,14 @@ class Command(BaseCommand):
         svd.fit(trainset)
         return svd
 
-    def _train_ncf(self, train_df, rating_col, embedding_dim, epochs, batch_size, lr):
+    def _train_ncf(self, train_df, rating_col, embedding_dim, epochs, batch_size, lr,
+                   weight_decay=1e-5, patience=5, val_frac=0.1):
         try:
+            import copy
+
             import torch
             import torch.nn as nn
-            from torch.utils.data import DataLoader, TensorDataset
+            from torch.utils.data import DataLoader, TensorDataset, random_split
         except ImportError:
             self.stdout.write(self.style.WARNING("  PyTorch not installed; skipping NCF."))
             return None, {}
@@ -223,18 +236,36 @@ class Command(BaseCommand):
         )
 
         dataset = TensorDataset(u_tensor, v_tensor, r_tensor)
-        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+        # Hold out a validation split to detect overfitting and drive early stopping.
+        n_val = max(1, int(len(dataset) * val_frac))
+        n_train = len(dataset) - n_val
+        gen = torch.Generator().manual_seed(SEED)
+        train_set, val_set = random_split(dataset, [n_train, n_val], generator=gen)
+        loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+        val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False)
+        self.stdout.write(
+            f"  Train interactions: {n_train:,}  |  Validation: {n_val:,}  "
+            f"(weight_decay={weight_decay}, patience={patience})"
+        )
 
         model = NCF(
             num_users=len(users),
             num_items=len(isbns),
             embedding_dim=embedding_dim,
         )
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+        # weight_decay applies L2 regularization to the embeddings — the main
+        # source of overfitting on a sparse catalogue (~1.6 ratings/book).
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         criterion = nn.MSELoss()
 
-        model.train()
+        best_val = float("inf")
+        best_state = copy.deepcopy(model.state_dict())
+        best_epoch = 0
+        epochs_no_improve = 0
+
         for epoch in range(1, epochs + 1):
+            model.train()
             total_loss = 0.0
             for u_b, v_b, r_b in loader:
                 optimizer.zero_grad()
@@ -243,8 +274,42 @@ class Command(BaseCommand):
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item() * len(r_b)
-            avg_loss = total_loss / len(dataset)
-            self.stdout.write(f"  Epoch {epoch}/{epochs}  loss={avg_loss:.4f}")
+            avg_loss = total_loss / n_train
+
+            # Validation pass
+            model.eval()
+            val_loss = 0.0
+            with torch.no_grad():
+                for u_b, v_b, r_b in val_loader:
+                    val_loss += criterion(model(u_b, v_b), r_b).item() * len(r_b)
+            val_loss /= n_val
+
+            marker = ""
+            if val_loss < best_val - 1e-4:
+                best_val = val_loss
+                best_state = copy.deepcopy(model.state_dict())
+                best_epoch = epoch
+                epochs_no_improve = 0
+                marker = "  *"
+            else:
+                epochs_no_improve += 1
+
+            self.stdout.write(
+                f"  Epoch {epoch}/{epochs}  loss={avg_loss:.4f}  val_loss={val_loss:.4f}{marker}"
+            )
+
+            if epochs_no_improve >= patience:
+                self.stdout.write(
+                    f"  Early stopping at epoch {epoch} "
+                    f"(best val_loss={best_val:.4f} @ epoch {best_epoch})."
+                )
+                break
+
+        # Restore the weights with the lowest validation loss.
+        model.load_state_dict(best_state)
+        self.stdout.write(
+            f"  Restored best model: epoch {best_epoch}, val_loss={best_val:.4f}."
+        )
 
         meta = {
             "num_users": len(users),
@@ -252,6 +317,9 @@ class Command(BaseCommand):
             "embedding_dim": embedding_dim,
             "user_to_idx": user_to_idx,
             "isbn_to_idx": isbn_to_idx,
+            "best_epoch": best_epoch,
+            "best_val_loss": best_val,
+            "weight_decay": weight_decay,
         }
         return model, meta
 

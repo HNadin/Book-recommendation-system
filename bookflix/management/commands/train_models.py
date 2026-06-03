@@ -47,12 +47,20 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--epochs", type=int, default=100,
-            help="NCF training epochs (default: 100)"
+            "--epochs", type=int, default=20,
+            help="NCF max training epochs; early stopping usually halts sooner (default: 20)"
         )
         parser.add_argument(
             "--embedding-dim", type=int, default=32,
             help="NCF embedding dimension (default: 32)"
+        )
+        parser.add_argument(
+            "--dropout", type=float, default=0.5,
+            help="NCF dropout rate — higher fights overfitting on sparse data (default: 0.5)"
+        )
+        parser.add_argument(
+            "--min-interactions", type=int, default=5,
+            help="Keep only users and books with >= N ratings (k-core, default: 5; 0 disables)"
         )
         parser.add_argument(
             "--batch-size", type=int, default=1024,
@@ -86,6 +94,20 @@ class Command(BaseCommand):
         ratings_df = load_data_ratings()
         books_df = load_books_df()
         self.stdout.write(f"  Ratings: {len(ratings_df):,}  |  Books: {len(books_df):,}")
+
+        # k-core filtering: drop "one-off" users/books so NCF has enough
+        # interactions per embedding to learn from (combats extreme sparsity).
+        min_int = options["min_interactions"]
+        if min_int and min_int > 1:
+            before = len(ratings_df)
+            ratings_df = self._kcore_filter(ratings_df, min_int)
+            n_users = ratings_df["user_id"].nunique()
+            n_books = ratings_df["book__isbn"].nunique()
+            density = len(ratings_df) / max(1, n_books)
+            self.stdout.write(
+                f"  k-core (>= {min_int}): {before:,} -> {len(ratings_df):,} ratings  |  "
+                f"{n_users:,} users, {n_books:,} books  ({density:.1f} ratings/book)"
+            )
 
         train_df, test_df = train_test_split(ratings_df, test_ratio=0.2)
         self.stdout.write(f"  Train: {len(train_df):,}  |  Test: {len(test_df):,}")
@@ -159,6 +181,7 @@ class Command(BaseCommand):
             lr=options["lr"],
             weight_decay=options["weight_decay"],
             patience=options["patience"],
+            dropout=options["dropout"],
         )
         if ncf_model:
             import torch
@@ -184,6 +207,23 @@ class Command(BaseCommand):
 
     # -----------------------------------------------------------------------
 
+    def _kcore_filter(self, ratings_df, min_int):
+        """Iteratively drop users and books with fewer than min_int ratings.
+
+        Filtering users changes book counts and vice versa, so we repeat until
+        the set is stable (a k-core), guaranteeing every surviving user AND
+        book has at least min_int interactions."""
+        df = ratings_df
+        while True:
+            n0 = len(df)
+            ub = df["user_id"].value_counts()
+            df = df[df["user_id"].isin(ub[ub >= min_int].index)]
+            bb = df["book__isbn"].value_counts()
+            df = df[df["book__isbn"].isin(bb[bb >= min_int].index)]
+            if len(df) == n0 or df.empty:
+                break
+        return df.reset_index(drop=True)
+
     def _train_svd(self, train_df):
         try:
             from surprise import SVD as SurpriseSVD
@@ -206,7 +246,7 @@ class Command(BaseCommand):
         return svd
 
     def _train_ncf(self, train_df, rating_col, embedding_dim, epochs, batch_size, lr,
-                   weight_decay=1e-5, patience=5, val_frac=0.1):
+                   weight_decay=1e-5, patience=5, dropout=0.5, val_frac=0.1):
         try:
             import copy
 
@@ -253,6 +293,7 @@ class Command(BaseCommand):
             num_users=len(users),
             num_items=len(isbns),
             embedding_dim=embedding_dim,
+            dropout=dropout,
         )
         # weight_decay applies L2 regularization to the embeddings — the main
         # source of overfitting on a sparse catalogue (~1.6 ratings/book).

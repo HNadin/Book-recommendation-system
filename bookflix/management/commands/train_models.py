@@ -105,10 +105,20 @@ class Command(BaseCommand):
 
         # --- BERT embedder (Section 2.2) ---
         self.stdout.write("=== Step 3: Training BERT semantic embedder (all-MiniLM-L6-v2) ===")
-        embedder = BERTEmbedder()
-        embedder.fit(books_df)
-        embedder.save(_path("bert_embedder.pkl"))
-        self.stdout.write("  BERT embedder saved.")
+        try:
+            embedder = BERTEmbedder()
+            embedder.fit(books_df)
+            embedder.save(_path("bert_embedder.pkl"))
+            self.stdout.write("  BERT embedder saved.")
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(
+                f"  BERT embedder failed ({e}); falling back to LSA embedder."
+            ))
+            from bookflix.ml.embeddings import LSAEmbedder
+            embedder = LSAEmbedder()
+            embedder.fit(books_df)
+            embedder.save(_path("lsa_embedder.pkl"))
+            self.stdout.write("  LSA embedder saved (fallback).")
 
         # --- SVD baseline ---
         self.stdout.write("=== Step 4: Training SVD baseline ===")

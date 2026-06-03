@@ -20,7 +20,9 @@ from bookflix.ml.evaluation import (
 from bookflix.ml.hybrid import cascade_recommend, feature_combination_recommend
 from bookflix.ml.model_store import (
     load_embedder,
+    load_hybrid_weights,
     load_ncf,
+    load_sentiment_map,
     load_svd_baseline,
     ncf_predict,
 )
@@ -353,6 +355,7 @@ def hybrid_recommendations(
     # --- NCF path ---
     ncf_result = load_ncf()
     if ncf_result is not None and embedder is not None:
+        weights = load_hybrid_weights()
         ranked = feature_combination_recommend(
             user_id=user_id,
             candidate_isbns=candidate_isbns[:2000],
@@ -360,6 +363,10 @@ def hybrid_recommendations(
             rated_isbns=liked_isbns,
             ncf_score_fn=ncf_predict,
             top_n=top_n,
+            w_ncf=weights.get("w_ncf", 0.6),
+            w_sem=weights.get("w_sem", 0.4),
+            w_sent=weights.get("w_sent", 0.0),
+            sentiment_map=load_sentiment_map() if weights.get("w_sent") else None,
         )
         return ranked
 

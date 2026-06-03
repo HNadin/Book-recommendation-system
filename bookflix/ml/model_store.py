@@ -108,6 +108,35 @@ def load_svd_baseline():
     return _cached("svd", _load)
 
 
+def load_hybrid_weights() -> dict:
+    """Tuned Feature-Combination weights selected by train_models.
+
+    Falls back to the module defaults in hybrid.py when no tuned artefact
+    exists yet (e.g. before the first training run)."""
+    def _load():
+        from bookflix.ml.hybrid import W_NCF, W_SEM, W_SENT
+        path = _path("hybrid_weights.pkl")
+        if not os.path.exists(path):
+            return {"w_ncf": W_NCF, "w_sem": W_SEM, "w_sent": W_SENT}
+        with open(path, "rb") as f:
+            w = pickle.load(f)
+        logger.info("Tuned hybrid weights loaded: %s", w)
+        return w
+
+    return _cached("hybrid_weights", _load)
+
+
+def load_sentiment_map() -> dict:
+    def _load():
+        path = _path("sentiment_map.pkl")
+        if not os.path.exists(path):
+            return {}
+        with open(path, "rb") as f:
+            return pickle.load(f)
+
+    return _cached("sentiment_map", _load) or {}
+
+
 def load_eval_results() -> dict:
     path = _path("eval_results.json")
     if not os.path.exists(path):

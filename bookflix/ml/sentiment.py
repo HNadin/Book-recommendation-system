@@ -44,13 +44,21 @@ def build_book_sentiment_map(reviews_df: pd.DataFrame) -> dict[str, float]:
     reviews_df must have columns: isbn (or Book-ISBN), ReviewContent (or review_text).
     Returns {isbn: mean_compound_sentiment}.
     """
-    isbn_col = "isbn" if "isbn" in reviews_df.columns else "Book-ISBN"
-    text_col = next(
-        (c for c in ("ReviewContent", "review_text", "Text", "text") if c in reviews_df.columns),
+    isbn_col = next(
+        (c for c in ("isbn", "ISBN", "Book-ISBN", "ProductId", "book_isbn", "ASIN", "asin")
+         if c in reviews_df.columns),
         None,
     )
-    if text_col is None:
-        logger.warning("No review text column found; skipping sentiment map.")
+    text_col = next(
+        (c for c in ("ReviewContent", "review_text", "Text", "Summary", "text")
+         if c in reviews_df.columns),
+        None,
+    )
+    if isbn_col is None or text_col is None:
+        logger.warning(
+            "Cannot build sentiment map: isbn_col=%s text_col=%s. Columns: %s",
+            isbn_col, text_col, reviews_df.columns.tolist(),
+        )
         return {}
 
     logger.info("Computing VADER sentiment for %d reviews…", len(reviews_df))

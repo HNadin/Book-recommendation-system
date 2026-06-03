@@ -364,12 +364,13 @@ class Command(BaseCommand):
             from bookflix.ml.model_store import ncf_predict as _ncf_predict
             ms._cache["ncf"] = (ncf_model, ncf_meta)
 
+            ncf_known = set(ncf_meta.get("isbn_to_idx", {}).keys())
+
             def ncf_recommend_fn(uid):
                 ctx = user_context.get(uid, set())
-                known = set(ncf_meta.get("isbn_to_idx", {}).keys())
-                candidates = [i for i in all_isbns if i not in ctx and i in known]
-                if not candidates:
-                    candidates = [i for i in all_isbns if i not in ctx]
+                # Use all unseen candidates so _pool() can guarantee relevant test
+                # items are included; ncf_recommend internally filters to known items.
+                candidates = [i for i in all_isbns if i not in ctx]
                 return ms.ncf_recommend(uid, _pool(uid, candidates), top_n=k)
 
             rmse = _rmse_for(_ncf_predict)

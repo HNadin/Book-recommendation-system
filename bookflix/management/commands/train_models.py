@@ -353,23 +353,29 @@ class Command(BaseCommand):
             if liked:
                 user_relevant[uid] = liked
 
-        sample_users = list(user_relevant.keys())[:200]
+        # Disjoint user groups: TUNE drives hybrid weight selection, EVAL is the
+        # held-out group on which every reported metric is computed.  No user
+        # appears in both, so tuned weights never see the evaluation data.
+        _rel_users = list(user_relevant.keys())
+        tune_users = _rel_users[:100]
+        eval_users = _rel_users[100:300]
 
-        # Seeded RNG for reproducible, fair candidate sampling.
-        # Each recommend call draws a random pool of 2 000 items and always
-        # includes the user's relevant test items so that Precision@K and
-        # NDCG@K are meaningful even with a catalogue of 200 000+ books.
-        _eval_rng = np.random.default_rng(SEED)
+        # Per-user seeded candidate sampling: the pool for a given user is fixed
+        # regardless of call order, so the weight grid search cannot perturb the
+        # pools used to score other models.  Each pool draws up to 2 000 items
+        # and always includes the user's relevant test items so that Precision@K
+        # and NDCG@K are meaningful against a catalogue of 200 000+ books.
         _POOL_SIZE = 2000
 
         def _pool(uid, candidates):
+            rng = np.random.default_rng(SEED + int(uid))
             rel = user_relevant.get(uid, set())
             rel_in = [c for c in candidates if c in rel]
             negatives = [c for c in candidates if c not in rel]
             n_neg = max(0, min(_POOL_SIZE - len(rel_in), len(negatives)))
-            neg_sample = _eval_rng.choice(negatives, n_neg, replace=False).tolist() if n_neg else []
+            neg_sample = rng.choice(negatives, n_neg, replace=False).tolist() if n_neg else []
             pool = rel_in + neg_sample
-            _eval_rng.shuffle(pool)
+            rng.shuffle(pool)
             return pool
 
         def _rmse_for(predict_fn):
@@ -384,9 +390,10 @@ class Command(BaseCommand):
                     pass
             return compute_rmse(actuals, preds) if actuals else None
 
-        def _ranking(recommend_fn):
+        def _ranking(recommend_fn, users=None):
+            users = eval_users if users is None else users
             user_recs = {}
-            for uid in sample_users:
+            for uid in users:
                 try:
                     user_recs[uid] = recommend_fn(uid)
                 except Exception:
@@ -460,49 +467,80 @@ class Command(BaseCommand):
                 f"ndcg_at_{k}": round(ndcg, 4),
             }
 
-            # --- Feature Combination Hybrid ---
+            # --- Feature Combination Hybrid (weights tuned on held-out users) ---
             if embedder:
-                from bookflix.ml.hybrid import feature_combination_recommend
+                from bookflix.ml.hybrid import _normalise
 
-                def hybrid_recommend_fn(uid):
+                with open(_path("sentiment_map.pkl"), "rb") as f:
+                    s_map = pickle.load(f)
+
+                # Precompute, once per user, the three normalised signal vectors
+                # over that user's fixed candidate pool.  Weight selection then
+                # reduces to cheap weighted sums instead of re-embedding books.
+                _comp_cache: dict = {}
+
+                def _components(uid):
+                    if uid in _comp_cache:
+                        return _comp_cache[uid]
                     ctx = user_context.get(uid, set())
                     liked_ctx = user_context_liked.get(uid, [])
                     candidates = [i for i in all_isbns if i not in ctx]
-                    ranked = feature_combination_recommend(
-                        user_id=uid,
-                        candidate_isbns=_pool(uid, candidates),
-                        embedder=embedder,
-                        rated_isbns=liked_ctx,
-                        ncf_score_fn=_ncf_predict,
-                        top_n=k,
-                    )
-                    return [r["isbn"] for r in ranked]
+                    pool = _pool(uid, candidates)
+                    profile = embedder.build_user_profile(liked_ctx)
+                    if profile is None:
+                        sem = np.zeros(len(pool))
+                    else:
+                        sem = np.stack([embedder.get(i) for i in pool]) @ profile
+                    ncf_raw = np.array([_ncf_predict(uid, i) or 5.0 for i in pool])
+                    sent_raw = (np.array([s_map.get(i, 0.0) for i in pool])
+                                if s_map else np.zeros(len(pool)))
+                    comp = (pool, _normalise(ncf_raw), _normalise(sem), _normalise(sent_raw))
+                    _comp_cache[uid] = comp
+                    return comp
 
-                prec, ndcg = _ranking(hybrid_recommend_fn)
+                def _rank(uid, w_ncf, w_sem, w_sent):
+                    pool, ncf_n, sem_n, sent_n = _components(uid)
+                    combined = w_ncf * ncf_n + w_sem * sem_n + w_sent * sent_n
+                    idx = np.argsort(combined)[::-1][:k]
+                    return [pool[i] for i in idx]
+
+                def _ndcg_on(users, w_ncf, w_sem, w_sent):
+                    recs = {uid: _rank(uid, w_ncf, w_sem, w_sent) for uid in users}
+                    return compute_ndcg_at_k(recs, user_relevant, k)
+
+                # --- Grid search 1: NCF + BERT (two-way blend) ---
+                steps = [i / 10 for i in range(11)]   # 0.0 .. 1.0
+                best2 = max(
+                    ((_ndcg_on(tune_users, w, 1 - w, 0.0), w, 1 - w, 0.0) for w in steps),
+                    key=lambda t: t[0],
+                )
+                _, w_ncf2, w_sem2, _ = best2
+                prec, ndcg = _ranking(lambda uid: _rank(uid, w_ncf2, w_sem2, 0.0))
+                self.stdout.write(
+                    f"  Hybrid (NCF+BERT) tuned weights: w_ncf={w_ncf2:.1f} w_sem={w_sem2:.1f}"
+                )
                 results["NCF + BERT Hybrid (Feature Combination)"] = {
                     "rmse": None,
                     f"precision_at_{k}": round(prec, 4),
                     f"ndcg_at_{k}": round(ndcg, 4),
+                    "w_ncf": w_ncf2, "w_sem": w_sem2, "w_sent": 0.0,
                 }
 
-                # --- Hybrid + Sentiment Correction ---
-                with open(_path("sentiment_map.pkl"), "rb") as f:
-                    s_map = pickle.load(f)
+                tuned_weights = {"w_ncf": w_ncf2, "w_sem": w_sem2, "w_sent": 0.0}
 
+                # --- Grid search 2: NCF + BERT + Sentiment (three-way simplex) ---
                 if s_map:
-                    def hybrid_sentiment_recommend_fn(uid):
-                        ctx = user_context.get(uid, set())
-                        liked_ctx = user_context_liked.get(uid, [])
-                        candidates = [i for i in all_isbns if i not in ctx]
-                        ranked = feature_combination_recommend(
-                            user_id=uid,
-                            candidate_isbns=_pool(uid, candidates),
-                            embedder=embedder,
-                            rated_isbns=liked_ctx,
-                            ncf_score_fn=_ncf_predict,
-                            top_n=k,
-                        )
-                        return [r["isbn"] for r in ranked]
+                    grid3 = [
+                        (a / 10, b / 10, 1 - a / 10 - b / 10)
+                        for a in range(11) for b in range(11 - a)
+                    ]
+                    best3 = max(
+                        ((_ndcg_on(tune_users, wn, ws, wse), wn, ws, wse)
+                         for wn, ws, wse in grid3),
+                        key=lambda t: t[0],
+                    )
+                    _, w_ncf3, w_sem3, w_sent3 = best3
+                    prec, ndcg = _ranking(lambda uid: _rank(uid, w_ncf3, w_sem3, w_sent3))
 
                     def hybrid_rmse_sentiment(uid, isbn):
                         base = _ncf_predict(uid, isbn)
@@ -511,11 +549,23 @@ class Command(BaseCommand):
                         return base + 0.5 * s_map.get(isbn, 0.0)
 
                     rmse = _rmse_for(hybrid_rmse_sentiment)
-                    prec, ndcg = _ranking(hybrid_sentiment_recommend_fn)
+                    self.stdout.write(
+                        f"  Hybrid (NCF+BERT+Sentiment) tuned weights: "
+                        f"w_ncf={w_ncf3:.1f} w_sem={w_sem3:.1f} w_sent={w_sent3:.1f}"
+                    )
                     results["NCF + BERT + Sentiment Correction"] = {
                         "rmse": round(rmse, 4) if rmse else None,
                         f"precision_at_{k}": round(prec, 4),
                         f"ndcg_at_{k}": round(ndcg, 4),
+                        "w_ncf": w_ncf3, "w_sem": w_sem3, "w_sent": w_sent3,
                     }
+
+                    # Persist the best blend overall for the live recommender.
+                    if best3[0] >= best2[0]:
+                        tuned_weights = {"w_ncf": w_ncf3, "w_sem": w_sem3, "w_sent": w_sent3}
+
+                with open(_path("hybrid_weights.pkl"), "wb") as f:
+                    pickle.dump(tuned_weights, f)
+                self.stdout.write(f"  Saved tuned hybrid weights: {tuned_weights}")
 
         return results

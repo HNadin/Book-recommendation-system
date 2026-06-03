@@ -5,12 +5,18 @@ Moves beyond the original cascade approach (content → SVD re-rank)
 to a true meta-level Feature Combination that merges:
   1. NCF collaborative signal  (learned user–item interaction score)
   2. Semantic content signal   (cosine similarity via BERT embeddings)
+  3. Sentiment signal          (book-level VADER compound, optional)
 
 The combined score for a (user, book) pair:
-    score = w_ncf · ncf_score_norm + w_sem · semantic_similarity
+    score = w_ncf · ncf_norm + w_sem · sem_norm + w_sent · sent_norm
 
-Both components are normalised to [0, 1] across the candidate pool
-before weighting so neither dominates by scale.
+All components are normalised to [0, 1] across the candidate pool
+before weighting so none dominates by scale.
+
+The weights are not fixed dogmatically: train_models tunes them on a
+held-out group of users (grid search maximising validation NDCG) and
+persists the result to hybrid_weights.pkl.  The defaults below are the
+fallback used when no tuned weights are available.
 """
 
 import logging
@@ -19,8 +25,9 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-W_NCF = 0.6   # weight for collaborative signal
-W_SEM = 0.4   # weight for semantic content signal
+W_NCF = 0.6    # weight for collaborative signal
+W_SEM = 0.4    # weight for semantic content signal
+W_SENT = 0.0   # weight for sentiment signal (off by default)
 
 
 def _normalise(arr: np.ndarray) -> np.ndarray:
@@ -39,6 +46,8 @@ def feature_combination_recommend(
     top_n: int = 10,
     w_ncf: float = W_NCF,
     w_sem: float = W_SEM,
+    w_sent: float = W_SENT,
+    sentiment_map: dict | None = None,
 ) -> list[dict]:
     """
     Parameters
@@ -49,6 +58,8 @@ def feature_combination_recommend(
     rated_isbns      : ISBNs of books the user rated >= RELEVANCE_THRESHOLD
     ncf_score_fn     : callable(user_id, isbn) -> float | None
     top_n            : number of recommendations to return
+    w_ncf/w_sem/w_sent : component weights (tuned by train_models)
+    sentiment_map    : optional {isbn: compound} used when w_sent > 0
 
     Returns
     -------
@@ -72,10 +83,17 @@ def feature_combination_recommend(
         for isbn in candidate_isbns
     ])
 
+    # --- Sentiment component (optional) ---
+    if w_sent and sentiment_map:
+        sent_raw = np.array([sentiment_map.get(isbn, 0.0) for isbn in candidate_isbns])
+    else:
+        sent_raw = np.zeros(len(candidate_isbns))
+
     # --- Normalise and combine ---
     ncf_norm = _normalise(ncf_raw)
     sem_norm = _normalise(sem_scores)
-    combined = w_ncf * ncf_norm + w_sem * sem_norm
+    sent_norm = _normalise(sent_raw)
+    combined = w_ncf * ncf_norm + w_sem * sem_norm + w_sent * sent_norm
 
     # --- Rank and return top_n ---
     ranked_idx = np.argsort(combined)[::-1][:top_n]
@@ -84,6 +102,7 @@ def feature_combination_recommend(
             "isbn": candidate_isbns[i],
             "ncf_score": round(float(ncf_raw[i]), 3),
             "sem_score": round(float(sem_scores[i]), 3),
+            "sent_score": round(float(sent_raw[i]), 3),
             "score": round(float(combined[i]), 3),
         }
         for i in ranked_idx

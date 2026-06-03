@@ -89,6 +89,22 @@ def apply_sentiment_correction(
     return ratings_df
 
 
+def build_metadata_sentiment_map(books_df) -> dict[str, float]:
+    """
+    Fallback when no ISBN-linked review corpus is available.
+    Computes VADER compound sentiment from book title + author text.
+    This is a weak but honest signal — documented in Section 2.5 of thesis.
+    """
+    rows = []
+    for _, row in books_df.iterrows():
+        text = f"{row.get('title', '')}. By {row.get('author', '')}".strip()
+        compound = _vader_compound(text)
+        rows.append((str(row["isbn"]), compound))
+    result = {isbn: score for isbn, score in rows if isbn}
+    logger.info("Metadata sentiment map built for %d books.", len(result))
+    return result
+
+
 def label_sentiment(compound: float) -> str:
     if compound >= 0.05:
         return "Positive"

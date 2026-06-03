@@ -88,7 +88,7 @@ class Command(BaseCommand):
         sentiment_map: dict = {}
         if os.path.exists(reviews_path):
             try:
-                reviews_df = pd.read_csv(reviews_path, on_bad_lines="skip", low_memory=False)
+                reviews_df = pd.read_csv(reviews_path, encoding="cp1252", on_bad_lines="skip", low_memory=False)
                 sentiment_map = build_book_sentiment_map(reviews_df)
                 train_df = apply_sentiment_correction(train_df, sentiment_map)
                 self.stdout.write(f"  Sentiment map: {len(sentiment_map):,} books corrected.")
@@ -105,10 +105,20 @@ class Command(BaseCommand):
 
         # --- BERT embedder (Section 2.2) ---
         self.stdout.write("=== Step 3: Training BERT semantic embedder (all-MiniLM-L6-v2) ===")
-        embedder = BERTEmbedder()
-        embedder.fit(books_df)
-        embedder.save(_path("bert_embedder.pkl"))
-        self.stdout.write("  BERT embedder saved.")
+        try:
+            embedder = BERTEmbedder()
+            embedder.fit(books_df)
+            embedder.save(_path("bert_embedder.pkl"))
+            self.stdout.write("  BERT embedder saved.")
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(
+                f"  BERT embedder failed ({e}); falling back to LSA embedder."
+            ))
+            from bookflix.ml.embeddings import LSAEmbedder
+            embedder = LSAEmbedder()
+            embedder.fit(books_df)
+            embedder.save(_path("lsa_embedder.pkl"))
+            self.stdout.write("  LSA embedder saved (fallback).")
 
         # --- SVD baseline ---
         self.stdout.write("=== Step 4: Training SVD baseline ===")
@@ -266,6 +276,23 @@ class Command(BaseCommand):
 
         sample_users = list(user_relevant.keys())[:200]
 
+        # Seeded RNG for reproducible, fair candidate sampling.
+        # Each recommend call draws a random pool of 2 000 items and always
+        # includes the user's relevant test items so that Precision@K and
+        # NDCG@K are meaningful even with a catalogue of 200 000+ books.
+        _eval_rng = np.random.default_rng(SEED)
+        _POOL_SIZE = 2000
+
+        def _pool(uid, candidates):
+            rel = user_relevant.get(uid, set())
+            rel_in = [c for c in candidates if c in rel]
+            negatives = [c for c in candidates if c not in rel]
+            n_neg = max(0, min(_POOL_SIZE - len(rel_in), len(negatives)))
+            neg_sample = _eval_rng.choice(negatives, n_neg, replace=False).tolist() if n_neg else []
+            pool = rel_in + neg_sample
+            _eval_rng.shuffle(pool)
+            return pool
+
         def _rmse_for(predict_fn):
             actuals, preds = [], []
             for _, row in test_df.iterrows():
@@ -297,7 +324,7 @@ class Command(BaseCommand):
             def svd_recommend(uid):
                 ctx = user_context.get(uid, set())
                 candidates = [i for i in all_isbns if i not in ctx]
-                preds = [(i, svd.predict(uid, i).est) for i in candidates[:500]]
+                preds = [(i, svd.predict(uid, i).est) for i in _pool(uid, candidates)]
                 preds.sort(key=lambda x: x[1], reverse=True)
                 return [i for i, _ in preds[:k]]
 
@@ -318,10 +345,11 @@ class Command(BaseCommand):
                 candidates = [i for i in all_isbns if i not in ctx]
                 if profile is None or not candidates:
                     return []
-                vecs = np.stack([embedder.get(i) for i in candidates[:500]])
+                pool = _pool(uid, candidates)
+                vecs = np.stack([embedder.get(i) for i in pool])
                 sims = vecs @ profile
                 ranked = np.argsort(sims)[::-1][:k]
-                return [candidates[i] for i in ranked]
+                return [pool[i] for i in ranked]
 
             prec, ndcg = _ranking(content_recommend)
             results["Content-only (BERT)"] = {
@@ -342,7 +370,7 @@ class Command(BaseCommand):
                 candidates = [i for i in all_isbns if i not in ctx and i in known]
                 if not candidates:
                     candidates = [i for i in all_isbns if i not in ctx]
-                return ms.ncf_recommend(uid, candidates[:500], top_n=k)
+                return ms.ncf_recommend(uid, _pool(uid, candidates), top_n=k)
 
             rmse = _rmse_for(_ncf_predict)
             prec, ndcg = _ranking(ncf_recommend_fn)
@@ -362,7 +390,7 @@ class Command(BaseCommand):
                     candidates = [i for i in all_isbns if i not in ctx]
                     ranked = feature_combination_recommend(
                         user_id=uid,
-                        candidate_isbns=candidates[:500],
+                        candidate_isbns=_pool(uid, candidates),
                         embedder=embedder,
                         rated_isbns=liked_ctx,
                         ncf_score_fn=_ncf_predict,
@@ -388,7 +416,7 @@ class Command(BaseCommand):
                         candidates = [i for i in all_isbns if i not in ctx]
                         ranked = feature_combination_recommend(
                             user_id=uid,
-                            candidate_isbns=candidates[:500],
+                            candidate_isbns=_pool(uid, candidates),
                             embedder=embedder,
                             rated_isbns=liked_ctx,
                             ncf_score_fn=_ncf_predict,

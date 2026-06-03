@@ -46,7 +46,7 @@ def build_book_sentiment_map(reviews_df: pd.DataFrame) -> dict[str, float]:
     """
     isbn_col = "isbn" if "isbn" in reviews_df.columns else "Book-ISBN"
     text_col = next(
-        (c for c in ("ReviewContent", "review_text", "text") if c in reviews_df.columns),
+        (c for c in ("ReviewContent", "review_text", "Text", "text") if c in reviews_df.columns),
         None,
     )
     if text_col is None:

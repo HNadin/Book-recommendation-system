@@ -33,7 +33,7 @@ from bookflix.ml.evaluation import (
     compute_rmse,
 )
 from bookflix.ml.model_store import MODELS_DIR, _path, save_eval_results
-from bookflix.ml.sentiment import apply_sentiment_correction, build_book_sentiment_map
+from bookflix.ml.sentiment import apply_sentiment_correction, build_book_sentiment_map, build_metadata_sentiment_map
 from bookflix.recommendation_algorithms import load_books_df, load_data_ratings, train_test_split
 
 logger = logging.getLogger(__name__)
@@ -47,8 +47,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--epochs", type=int, default=30,
-            help="NCF training epochs (default: 30)"
+            "--epochs", type=int, default=100,
+            help="NCF training epochs (default: 100)"
         )
         parser.add_argument(
             "--embedding-dim", type=int, default=32,
@@ -90,14 +90,25 @@ class Command(BaseCommand):
             try:
                 reviews_df = pd.read_csv(reviews_path, encoding="cp1252", on_bad_lines="skip", low_memory=False)
                 sentiment_map = build_book_sentiment_map(reviews_df)
-                train_df = apply_sentiment_correction(train_df, sentiment_map)
-                self.stdout.write(f"  Sentiment map: {len(sentiment_map):,} books corrected.")
+                if sentiment_map:
+                    train_df = apply_sentiment_correction(train_df, sentiment_map)
+                    self.stdout.write(f"  Sentiment map: {len(sentiment_map):,} books corrected.")
+                else:
+                    self.stdout.write(self.style.WARNING(
+                        "  Reviews CSV has no ISBN column — falling back to title+author sentiment."
+                    ))
+                    sentiment_map = build_metadata_sentiment_map(books_df)
+                    train_df = apply_sentiment_correction(train_df, sentiment_map)
+                    self.stdout.write(f"  Sentiment map (title+author): {len(sentiment_map):,} books.")
             except Exception as e:
                 self.stdout.write(self.style.WARNING(f"  Sentiment correction skipped: {e}"))
         else:
             self.stdout.write(self.style.WARNING(
-                f"  {reviews_path} not found — skipping sentiment correction."
+                f"  {reviews_path} not found — using title+author sentiment fallback."
             ))
+            sentiment_map = build_metadata_sentiment_map(books_df)
+            train_df = apply_sentiment_correction(train_df, sentiment_map)
+            self.stdout.write(f"  Sentiment map (title+author): {len(sentiment_map):,} books.")
 
         # Save sentiment map
         with open(_path("sentiment_map.pkl"), "wb") as f:

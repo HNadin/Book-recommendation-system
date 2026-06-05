@@ -1,22 +1,33 @@
 {
+  "SVD (baseline)": {
+    "rmse": 1.5611,
+    "precision_at_10": 0.0805,
+    "ndcg_at_10": 0.1729
+  },
   "Content-only (BERT)": {
     "rmse": null,
-    "precision_at_10": 0.0068,
-    "ndcg_at_10": 0.0151
+    "precision_at_10": 0.0255,
+    "ndcg_at_10": 0.0732
   },
   "NCF": {
-    "rmse": 5.3677,
-    "precision_at_10": 0.0082,
-    "ndcg_at_10": 0.0161
+    "rmse": 1.7192,
+    "precision_at_10": 0.057,
+    "ndcg_at_10": 0.1008
   },
   "NCF + BERT Hybrid (Feature Combination)": {
     "rmse": null,
-    "precision_at_10": 0.0075,
-    "ndcg_at_10": 0.0153
+    "precision_at_10": 0.0875,
+    "ndcg_at_10": 0.2003,
+    "w_ncf": 0.3,
+    "w_sem": 0.7,
+    "w_sent": 0.0
   },
   "NCF + BERT + Sentiment Correction": {
-    "rmse": 5.3677,
-    "precision_at_10": 0.0068,
-    "ndcg_at_10": 0.014
+    "rmse": 1.7126,
+    "precision_at_10": 0.0875,
+    "ndcg_at_10": 0.2003,
+    "w_ncf": 0.3,
+    "w_sem": 0.7,
+    "w_sent": 0.0
   }
 }

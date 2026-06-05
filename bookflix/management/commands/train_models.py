@@ -33,7 +33,12 @@ from bookflix.ml.evaluation import (
     compute_rmse,
 )
 from bookflix.ml.model_store import MODELS_DIR, _path, save_eval_results
-from bookflix.ml.sentiment import apply_sentiment_correction, build_book_sentiment_map, build_metadata_sentiment_map
+from bookflix.ml.sentiment import (
+    apply_sentiment_correction,
+    build_amazon_sentiment_map,
+    build_book_sentiment_map,
+    build_metadata_sentiment_map,
+)
 from bookflix.recommendation_algorithms import load_books_df, load_data_ratings, train_test_split
 
 logger = logging.getLogger(__name__)
@@ -83,6 +88,12 @@ class Command(BaseCommand):
             help="Path to reviews CSV for sentiment correction"
         )
         parser.add_argument(
+            "--amazon-csv", type=str, default="",
+            help="Path to Amazon Books_rating.csv for sentiment correction "
+                 "(columns: Id, Title, review/text, review/summary). "
+                 "When provided, takes priority over --reviews-csv."
+        )
+        parser.add_argument(
             "--eval-k", type=int, default=10,
             help="K for Precision@K and NDCG@K (default: 10)"
         )
@@ -114,31 +125,46 @@ class Command(BaseCommand):
 
         # --- Sentiment correction ---
         self.stdout.write("=== Step 2: Sentiment correction ===")
-        reviews_path = options["reviews_csv"]
         sentiment_map: dict = {}
-        if os.path.exists(reviews_path):
+
+        amazon_path = options.get("amazon_csv", "")
+        if amazon_path and os.path.exists(amazon_path):
             try:
-                reviews_df = pd.read_csv(reviews_path, encoding="cp1252", on_bad_lines="skip", low_memory=False)
-                sentiment_map = build_book_sentiment_map(reviews_df)
-                if sentiment_map:
+                self.stdout.write(f"  Loading Amazon Books Reviews from {amazon_path} …")
+                amazon_df = pd.read_csv(amazon_path, on_bad_lines="skip", low_memory=False)
+                self.stdout.write(f"  Amazon CSV columns: {amazon_df.columns.tolist()}")
+                sentiment_map = build_amazon_sentiment_map(amazon_df, books_df)
+                n_matched = len(sentiment_map)
+                if n_matched:
+                    avg = sum(sentiment_map.values()) / n_matched
                     train_df = apply_sentiment_correction(train_df, sentiment_map)
-                    self.stdout.write(f"  Sentiment map: {len(sentiment_map):,} books corrected.")
+                    self.stdout.write(
+                        f"  Matched {n_matched:,} books via Amazon Reviews "
+                        f"(avg compound: {avg:+.3f})."
+                    )
                 else:
-                    self.stdout.write(self.style.WARNING(
-                        "  Reviews CSV has no ISBN column — falling back to title+author sentiment."
-                    ))
-                    sentiment_map = build_metadata_sentiment_map(books_df)
-                    train_df = apply_sentiment_correction(train_df, sentiment_map)
-                    self.stdout.write(f"  Sentiment map (title+author): {len(sentiment_map):,} books.")
+                    self.stdout.write(self.style.WARNING("  Amazon CSV produced no matches."))
             except Exception as e:
-                self.stdout.write(self.style.WARNING(f"  Sentiment correction skipped: {e}"))
+                self.stdout.write(self.style.WARNING(f"  Amazon sentiment failed: {e}"))
         else:
-            self.stdout.write(self.style.WARNING(
-                f"  {reviews_path} not found — using title+author sentiment fallback."
-            ))
-            sentiment_map = build_metadata_sentiment_map(books_df)
-            train_df = apply_sentiment_correction(train_df, sentiment_map)
-            self.stdout.write(f"  Sentiment map (title+author): {len(sentiment_map):,} books.")
+            reviews_path = options["reviews_csv"]
+            if os.path.exists(reviews_path):
+                try:
+                    reviews_df = pd.read_csv(reviews_path, encoding="cp1252", on_bad_lines="skip", low_memory=False)
+                    sentiment_map = build_book_sentiment_map(reviews_df)
+                    if sentiment_map:
+                        train_df = apply_sentiment_correction(train_df, sentiment_map)
+                        self.stdout.write(f"  Sentiment map: {len(sentiment_map):,} books corrected.")
+                    else:
+                        self.stdout.write(self.style.WARNING(
+                            "  Reviews CSV has no ISBN column — sentiment correction skipped."
+                        ))
+                except Exception as e:
+                    self.stdout.write(self.style.WARNING(f"  Sentiment correction skipped: {e}"))
+            else:
+                self.stdout.write(self.style.WARNING(
+                    f"  No Amazon CSV and {reviews_path} not found — sentiment correction skipped."
+                ))
 
         # Save sentiment map
         with open(_path("sentiment_map.pkl"), "wb") as f:

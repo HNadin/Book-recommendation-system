@@ -84,6 +84,11 @@ class Command(BaseCommand):
             help="Early-stopping patience: stop after N epochs without val improvement (default: 5)"
         )
         parser.add_argument(
+            "--sentiments-csv", type=str, default="",
+            help="Path to pre-calculated sentiments CSV (columns: isbn/final_isbn + polarity/compound). "
+                 "Takes priority over --amazon-csv and --reviews-csv."
+        )
+        parser.add_argument(
             "--reviews-csv", type=str, default="Reviews.csv",
             help="Path to reviews CSV for sentiment correction"
         )
@@ -127,7 +132,41 @@ class Command(BaseCommand):
         self.stdout.write("=== Step 2: Sentiment correction ===")
         sentiment_map: dict = {}
 
-        amazon_path = options.get("amazon_csv", "")
+        sentiments_csv = options.get("sentiments_csv", "")
+        if sentiments_csv and os.path.exists(sentiments_csv):
+            try:
+                self.stdout.write(f"  Loading pre-calculated sentiments from {sentiments_csv} …")
+                sent_df = pd.read_csv(sentiments_csv, low_memory=False)
+                # Support column name variants from different pre-processing scripts
+                isbn_col = next(
+                    (c for c in ("final_isbn", "isbn", "ISBN", "Id", "id") if c in sent_df.columns), None
+                )
+                score_col = next(
+                    (c for c in ("polarity", "compound", "sentiment", "score") if c in sent_df.columns), None
+                )
+                if isbn_col and score_col:
+                    sentiment_map = (
+                        sent_df.dropna(subset=[isbn_col, score_col])
+                        .groupby(isbn_col)[score_col].mean()
+                        .to_dict()
+                    )
+                    sentiment_map = {str(k): float(v) for k, v in sentiment_map.items()}
+                    n = len(sentiment_map)
+                    avg = sum(sentiment_map.values()) / n if n else 0.0
+                    train_df = apply_sentiment_correction(train_df, sentiment_map)
+                    self.stdout.write(
+                        f"  Matched {n:,} books via pre-calculated sentiments (avg compound: {avg:+.3f})."
+                    )
+                else:
+                    self.stdout.write(self.style.WARNING(
+                        f"  sentiments.csv columns not recognised: {sent_df.columns.tolist()}"
+                    ))
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f"  Failed to load sentiments CSV: {e}"))
+        else:
+            sentiments_csv = ""  # fall through to amazon/reviews paths
+
+        amazon_path = options.get("amazon_csv", "") if not sentiments_csv else ""
         if amazon_path and os.path.exists(amazon_path):
             try:
                 self.stdout.write(f"  Loading Amazon Books Reviews from {amazon_path} …")

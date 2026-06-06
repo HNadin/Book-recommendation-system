@@ -216,11 +216,31 @@ class Command(BaseCommand):
                 pickle.dump(meta, f)
             self.stdout.write("  NCF model saved.")
 
+        # --- NCF ablation: train on raw ratings to isolate sentiment contribution ---
+        ncf_raw_model, ncf_raw_meta = None, {}
+        if rating_col == "adjusted_rating":
+            self.stdout.write("=== Step 5b: NCF ablation (raw ratings, no sentiment correction) ===")
+            ncf_raw_model, ncf_raw_meta = self._train_ncf(
+                train_df,
+                rating_col="book_rating",
+                embedding_dim=options["embedding_dim"],
+                epochs=options["epochs"],
+                batch_size=options["batch_size"],
+                lr=options["lr"],
+                weight_decay=options["weight_decay"],
+                patience=options["patience"],
+                dropout=options["dropout"],
+            )
+            if ncf_raw_model:
+                self.stdout.write("  NCF ablation model trained (not saved to disk).")
+
         # --- Evaluation ---
         self.stdout.write("=== Step 6: Evaluating all models ===")
         k = options["eval_k"]
         results = self._evaluate_all(
-            train_df, test_df, books_df, embedder, svd_model, ncf_model, meta, k
+            train_df, test_df, books_df, embedder, svd_model,
+            ncf_model, meta, k,
+            ncf_raw_model=ncf_raw_model, ncf_raw_meta=ncf_raw_meta,
         )
         save_eval_results(results)
         self.stdout.write("\n=== Evaluation Results ===")
@@ -390,7 +410,8 @@ class Command(BaseCommand):
         }
         return model, meta
 
-    def _evaluate_all(self, train_df, test_df, books_df, embedder, svd, ncf_model, ncf_meta, k):
+    def _evaluate_all(self, train_df, test_df, books_df, embedder, svd, ncf_model, ncf_meta, k,
+                      ncf_raw_model=None, ncf_raw_meta=None):
         results = {}
         all_isbns = books_df["isbn"].tolist()
 
@@ -533,6 +554,48 @@ class Command(BaseCommand):
                 f"precision_at_{k}": round(prec, 4),
                 f"ndcg_at_{k}": round(ndcg, 4),
             }
+
+            # --- Ablation: NCF trained on raw (uncorrected) ratings ---
+            # Isolates the contribution of sentiment correction.
+            # Comparing "NCF (no sentiment)" vs "NCF" shows whether adjusted_rating
+            # actually helps — without this, the sentiment benefit is unproven.
+            if ncf_raw_model is not None and ncf_raw_meta:
+                import bookflix.ml.model_store as ms_raw
+                ms_raw._cache["ncf_ablation"] = (ncf_raw_model, ncf_raw_meta)
+
+                def _ncf_raw_predict(uid, isbn):
+                    uid_map = ncf_raw_meta["user_to_idx"]
+                    iid_map = ncf_raw_meta["isbn_to_idx"]
+                    u = uid_map.get(uid)
+                    v = iid_map.get(isbn)
+                    if u is None or v is None:
+                        return None
+                    import torch
+                    with torch.no_grad():
+                        score = ncf_raw_model(
+                            torch.tensor([u]), torch.tensor([v])
+                        ).item()
+                    return float(np.clip(score, 1.0, 10.0))
+
+                def ncf_raw_recommend_fn(uid):
+                    ctx = user_context.get(uid, set())
+                    candidates = [i for i in all_isbns if i not in ctx]
+                    pool = _pool(uid, candidates)
+                    known = ncf_raw_meta.get("isbn_to_idx", {})
+                    scores = [
+                        (isbn, _ncf_raw_predict(uid, isbn) or 5.0)
+                        for isbn in pool if isbn in known
+                    ]
+                    scores.sort(key=lambda x: x[1], reverse=True)
+                    return [isbn for isbn, _ in scores[:k]]
+
+                rmse_raw = _rmse_for(_ncf_raw_predict)
+                prec_raw, ndcg_raw = _ranking(ncf_raw_recommend_fn)
+                results["NCF (no sentiment — ablation)"] = {
+                    "rmse": round(rmse_raw, 4) if rmse_raw else None,
+                    f"precision_at_{k}": round(prec_raw, 4),
+                    f"ndcg_at_{k}": round(ndcg_raw, 4),
+                }
 
             # --- Feature Combination Hybrid (weights tuned on held-out users) ---
             if embedder:
